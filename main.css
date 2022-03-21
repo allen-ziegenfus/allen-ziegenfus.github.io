@@ -421,7 +421,7 @@ h1 {
   row-gap: 2em;
   column-gap: 2em;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, 25%);
   grid-auto-rows: 1fr;
 }
 
