@@ -35,6 +35,7 @@ jobs:
           git config user.email github-actions@github.com
           cp -r dist /tmp
           git checkout master
+          git clean -fdx
           cp -r /tmp/dist/* .
           git add -A 
           git commit -m "Build of github site"
