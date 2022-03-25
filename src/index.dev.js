@@ -21,7 +21,10 @@ ReactDOM.render(
         render={props => (
           <IndexPage
             {...props}
-            currentPage={parseInt(props.match.params.page, 10)}
+            currentPage={parseInt(
+              props.match.params.page,
+              process.env.ROWS_PER_PAGE
+            )}
           />
         )}
       />

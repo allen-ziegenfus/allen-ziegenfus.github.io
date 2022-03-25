@@ -75,9 +75,7 @@ tableHasPublishedColumn(base, includePublished =>
           attachmentFields.forEach(attachmentField => {
             attachmentField.value.forEach(attachment => {
               if (!alreadyDownloadedAttachments[attachment.url]) {
-                const newUrl = `/assets/${attachment.id}-${
-                  attachment.filename
-                }`;
+                const newUrl = `/assets/${attachment.id}-${attachment.filename}`;
                 downloadFile(attachment.url, `dist${newUrl}`);
                 alreadyDownloadedAttachments[attachment.url] = true;
                 attachment.url = newUrl;
@@ -97,7 +95,7 @@ tableHasPublishedColumn(base, includePublished =>
           const filepath = `dist/${slug}.html`;
           allRows[currentPage].push(formattedRow);
           recordsOnCurrentPage += 1;
-          if (recordsOnCurrentPage >= 10) {
+          if (recordsOnCurrentPage >= process.env.ROWS_PER_PAGE) {
             recordsOnCurrentPage = 0;
             currentPage += 1;
           }
