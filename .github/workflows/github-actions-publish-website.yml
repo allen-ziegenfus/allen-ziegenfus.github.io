@@ -13,3 +13,18 @@ jobs:
           cache: "yarn"
       - run: yarn install
       - run: yarn build
+        env:
+          BASE_ID: ${{ secrets.BASE_ID }}
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          TABLE_ID: ${{ secrets.TABLE_ID }}
+          VIEW: ${{ secrets.VIEW }}
+          HOMEPAGE_FIELD_ORDER: ${{ secrets.HOMEPAGE_FIELD_ORDER }}
+          FIELD_ORDER: ${{ secrets.FIELD_ORDER }}
+          HEADER_TITLE: ${{ secrets.HEADER_TITLE }}
+          PAGE_TITLE_COLUMN: ${{ secrets.PAGE_TITLE_COLUMN }}
+          SITE_TITLE: ${{ secrets.SITE_TITLE }}
+          MARKDOWN_FIELDS: ${{ secrets.MARKDOWN_FIELDS }}
+          TITLE_FIELD: ${{ secrets.TITLE_FIELD }}
+          IMAGE_FIELD: ${{ secrets.IMAGE_FIELD }}
+          SITE_PREFIX: ${{ secrets.SITE_PREFIX }}
+          ROWS_PER_PAGE: ${{ secrets.SITE_PREFIX }}
