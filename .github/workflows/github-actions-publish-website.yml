@@ -29,7 +29,7 @@ jobs:
           TITLE_FIELD: ${{ secrets.TITLE_FIELD }}
           IMAGE_FIELD: ${{ secrets.IMAGE_FIELD }}
           SITE_PREFIX: ${{ secrets.SITE_PREFIX }}
-          ROWS_PER_PAGE: ${{ secrets.SITE_PREFIX }}
+          ROWS_PER_PAGE: ${{ secrets.ROWS_PER_PAGE }}
       - run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
