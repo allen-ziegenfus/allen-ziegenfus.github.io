@@ -28,3 +28,12 @@ jobs:
           IMAGE_FIELD: ${{ secrets.IMAGE_FIELD }}
           SITE_PREFIX: ${{ secrets.SITE_PREFIX }}
           ROWS_PER_PAGE: ${{ secrets.SITE_PREFIX }}
+      - run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          cp -r dist /tmp
+          git checkout master
+          cp -r /tmp/dist .
+          git add dist* 
+          git commit -m "Build of github site"
+          git push
