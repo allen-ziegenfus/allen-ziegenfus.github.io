@@ -12,15 +12,30 @@ const RowPage = ({ rowData }) => (
       <Header title={process.env.HEADER_TITLE} />
     )}
     <LinkOrAnchor className="nav-button" to="/">
-      Back
+      Zurück
     </LinkOrAnchor>
 
     <Row
-      fieldsToDisplay={getFieldsToDisplay(process.env.FIELD_ORDER)}
+      fieldsToDisplay={getFieldsToDisplay(process.env.TITLE_FIELD)}
       rowData={rowData}
     />
+
+    <div class="row-container">
+      <div class="row-container-left">
+        <Row
+          fieldsToDisplay={getFieldsToDisplay(process.env.FIELD_ORDER)}
+          rowData={rowData}
+        />
+      </div>
+      <div class="row-container-right">
+        <Row
+          fieldsToDisplay={getFieldsToDisplay(process.env.IMAGE_FIELD)}
+          rowData={rowData}
+        />
+      </div>
+    </div>
     <LinkOrAnchor className="nav-button" to="/">
-      Back
+      Zurück
     </LinkOrAnchor>
   </div>
 );

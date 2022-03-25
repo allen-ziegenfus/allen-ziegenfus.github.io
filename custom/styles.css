@@ -1,9 +1,88 @@
 .field-name {
   display: none;
-  visibility: hidden;
+}
+
+.row-page .field-name {
+  margin: 0;
+  display: block;
+  font-size: 18px;
+  font-weight: normal;
+  line-height: 28px;
+}
+
+.row-page .field {
+  margin: 1rem 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+.row-page .field-name:after {
+  content: ": ";
+}
+
+.row-page .field-value {
+  margin: 0 0 0 0.5rem !important;
+}
+
+body {
+  max-width: 1200px;
+}
+
+body::before {
+  display: none;
 }
 
 html {
-  color: #141414;
-  background-color: #fafafa;
+  font-family: Verdana, Arial, sans-serif;
+  color: white;
+  background-color: black;
+}
+
+h1 {
+  color: white;
+}
+
+.container {
+  row-gap: 2em;
+  column-gap: 2em;
+  display: grid;
+  grid-template-columns: repeat(4, 25%);
+  grid-auto-rows: 1fr;
+}
+
+.container > a {
+  padding: 2rem;
+  text-align: center;
+  background-color: #777777;
+  color: white;
+}
+
+.container > a img {
+  max-width: 100%;
+  margin: 0;
+}
+
+.nav-button {
+  color: white;
+}
+
+.index-page .row::after {
+  display: none;
+}
+
+.row-container {
+  display: flex;
+}
+
+.row-container-left {
+  flex: 0 0 40%;
+  padding: 1rem;
+}
+
+.row-container-right .field-name {
+  display: none;
+}
+
+.row-container-right .attachments img.attachment-image {
+  margin: 0;
 }

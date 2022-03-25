@@ -25,35 +25,37 @@ const Index = ({ rows, pagination }) => {
 
       {hero}
 
-      {rows.map(row => {
-        const slugField = _.find(row.fields, field => field.name === "Slug");
-        const slug =
-          (typeof window === "undefined" && slugField && slugField.value) ||
-          row.id;
+      <div className="container">
+        {rows.map(row => {
+          const slugField = _.find(row.fields, field => field.name === "Slug");
+          const slug =
+            (typeof window === "undefined" && slugField && slugField.value) ||
+            row.id;
 
-        return (
-          <LinkOrAnchor key={row.id} to={`/${slug}.html`}>
-            <Row
-              fieldsToDisplay={getFieldsToDisplay(
-                process.env.HOMEPAGE_FIELD_ORDER
-              )}
-              rowData={row}
-            />
-          </LinkOrAnchor>
-        );
-      })}
+          return (
+            <LinkOrAnchor key={row.id} to={`/${slug}.html`}>
+              <Row
+                fieldsToDisplay={getFieldsToDisplay(
+                  process.env.HOMEPAGE_FIELD_ORDER
+                )}
+                rowData={row}
+              />
+            </LinkOrAnchor>
+          );
+        })}
+      </div>
       {pagination && (
         <div>
           {pagination.back ? (
             <LinkOrAnchor className="nav-button" to={pagination.back}>
-              <span>← Previous</span>
+              <span>← Zurück</span>
             </LinkOrAnchor>
           ) : (
             <div />
           )}
           {pagination.next ? (
             <LinkOrAnchor className="nav-button" to={pagination.next}>
-              <span>Next →</span>
+              <span>Weiter →</span>
             </LinkOrAnchor>
           ) : (
             <div />
