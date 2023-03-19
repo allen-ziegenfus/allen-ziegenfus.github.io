@@ -1,15 +1,22 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Card from '../components/Card.astro';
----
+import { listOverviewRecords } from '../airtable/airtable';
 
-<Layout title="Welcome to Astro.">
+const overviewRecords = await listOverviewRecords();
+console.log(overviewRecords);
+
+---
+<Layout title="Welcome to Astro. - check">
 	<main>
-		<h1>Welcome to <span class="text-gradient">Astro</span></h1>
+		<h1>Welcome to <span class="text-gradient">Astro test</span></h1>
 		<p class="instructions">
 			To get started, open the directory <code>src/pages</code> in your project.<br />
 			<strong>Code Challenge:</strong> Tweak the "Welcome to Astro" message above.
 		</p>
+		<div>
+			{overviewRecords.map((overviewRecord) => <p>{overviewRecord.id}</p>)};
+		</div>
 		<ul role="list" class="link-card-grid">
 			<Card
 				href="https://docs.astro.build/"
