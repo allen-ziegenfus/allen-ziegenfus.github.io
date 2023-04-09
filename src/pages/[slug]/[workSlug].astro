@@ -1,6 +1,10 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getWerkgruppen } from "../../werkverzeichnis/werkgruppen";
+import {
+  getWerkgruppen,
+  Work,
+  Workgroup,
+} from "../../werkverzeichnis/werkgruppen";
 
 export async function getStaticPaths() {
   const werkgruppen = await getWerkgruppen();
@@ -15,7 +19,7 @@ export async function getStaticPaths() {
       });
     }
   }
-  return works.map((work) => ({
+  const paths = works.map((work) => ({
     params: {
       slug: work.slug,
       workSlug: work.workSlug,
@@ -24,9 +28,10 @@ export async function getStaticPaths() {
       work: work.work,
     },
   }));
+
+  return paths;
 }
 const { work } = Astro.props;
-
 const title =
   "Werkverzeichnis von Vollrad Kutscher 1968 bis 2000: " + work.Titel;
 ---
@@ -46,6 +51,12 @@ const title =
       <p>Beschreibung: {work.Beschreibung}</p>
       <p>Material: {work.Material}</p>
       <p>Standort: {work.Standort}</p>
+      <p>Technik: {work.Technik}</p>
+      <p>Auflage: {work.Auflage}</p>
+      <p>Foto: {work.Foto}</p>
+      <p>Ausstellung: {work.Ausstellung}</p>
+      <p>Literatur: {work.Literatur}</p>
+      <p>Bibliographie: {work.Bibliographie}</p>
     </div>
     <div class="w-1/2"><img src={work.Thumbnail} /></div>
   </main>

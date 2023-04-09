@@ -33,7 +33,7 @@ const title =
               Thumbnail: URL;
             }) => (
               <Card
-                href={werk.Slug}
+                href={"/" + werkgruppe.Slug + "/" + werk.Slug}
                 title={werk.InvNr}
                 body={werk.Titel}
                 thumbnail={werk.Thumbnail}

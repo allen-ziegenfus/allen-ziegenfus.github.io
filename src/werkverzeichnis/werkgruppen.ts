@@ -2,26 +2,34 @@
 import slugify from "slugify"
 //import.meta.env.DEV
 
-let werkgruppen: {
-    Titel: string; Slug: string; Thumbnail: any; Count: number; Records: {
-        id: string,
-        InvNr: string,
-        Slug: string,
-        Anzahl: string,
-        Werkgruppe: string,
-        Maße: string,
-        Material: string,
-        Beschreibung: string,
-        Jahr: string,
-        Zustand: string,
-        Standort: string,
-        Titel: string,
-        Signatur: string,
-        Bilder: [],
-        Thumbnail: URL
+export type Work = {
+    id: string,
+    InvNr: string,
+    Slug: string,
+    Anzahl: string,
+    Werkgruppe: string,
+    Maße: string,
+    Material: string,
+    Beschreibung: string,
+    Jahr: string,
+    Zustand: string,
+    Standort: string,
+    Titel: string,
+    Signatur: string,
+    Bilder: [],
+    Thumbnail: URL,
+    Technik: string,
+    Auflage: string,
+    Foto: string,
+    Ausstellung: string,
+    Literatur: string,
+    Bibliographie: string
+}
 
-    }[];
-}[] = [];
+export type Workgroup = {
+    Titel: string; Slug: string; Thumbnail: any; Count: number; Records: Work[]
+}
+let werkgruppen: Workgroup[] = [];
 
 export async function getWerkgruppen() {
     if (werkgruppen.length > 0) {
@@ -38,7 +46,8 @@ export async function getWerkgruppen() {
         ({
             id: record.id,
             InvNr: record.fields["Inv. Nr."],
-            Slug:  slugify(record.fields["Inv. Nr."], {lower: true}),
+            //Slug: "/" + overviewRecord.fields.Slug + "/" + slugify(record.fields["Inv. Nr."], { lower: true }),
+            Slug: slugify(record.fields["Inv. Nr."], { lower: true }),
             Anzahl: record.fields.Anzahl,
             Werkgruppe: record.fields.Werkgruppe,
             Maße: record.fields.Maße,
@@ -48,10 +57,16 @@ export async function getWerkgruppen() {
             Zustand: record.fields.Zustand,
             Standort: record.fields.Standort,
             Titel: record.fields.Titel,
+            Technik: record.fields.Technik,
+            Auflage: record.fields.Auflage,
             Signatur: record.fields.Signatur,
-            Bilder: record.fields?.Bild?.map((bild: { thumbnails: { large: { url: any; }; }; }) =>  bild?.thumbnails?.large?.url),
+            Foto: record.fields.Foto,
+            Ausstellung: record.fields.Ausstellung,
+            Literatur: record.fields.Literatur,
+            Bibliographie: record.fields.Bibliographie,
+            Bilder: record.fields?.Bild?.map((bild: { thumbnails: { large: { url: any; }; }; }) => bild?.thumbnails?.large?.url),
             Thumbnail: getSmallThumbnailURL(record.fields?.Bild?.slice(0, 1)[0]),
-            
+
         })));
 
         werkgruppenTemp.push({
