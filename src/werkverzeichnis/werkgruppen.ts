@@ -46,7 +46,6 @@ export async function getWerkgruppen() {
         ({
             id: record.id,
             InvNr: record.fields["Inv. Nr."],
-            //Slug: "/" + overviewRecord.fields.Slug + "/" + slugify(record.fields["Inv. Nr."], { lower: true }),
             Slug: slugify(record.fields["Inv. Nr."], { lower: true }),
             Anzahl: record.fields.Anzahl,
             Werkgruppe: record.fields.Werkgruppe,

@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { Img } from "astro-imagetools/components";
 import {
   getWerkgruppen,
   Work,
@@ -58,6 +59,8 @@ const title =
       <p>Literatur: {work.Literatur}</p>
       <p>Bibliographie: {work.Bibliographie}</p>
     </div>
-    <div class="w-1/2"><img src={work.Thumbnail} /></div>
+    <div class="w-1/2">
+      {work.Thumbnail && <Img src={work.Thumbnail} alt={work.Titel} />}
+    </div>
   </main>
 </Layout>
