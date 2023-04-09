@@ -1,0 +1,40 @@
+---
+import Card from "../components/Card.astro";
+import Layout from "../layouts/Layout.astro";
+import { getWerkgruppen } from "../werkverzeichnis/werkgruppen";
+
+export async function getStaticPaths() {
+  const werkgruppen = await getWerkgruppen();
+
+  return werkgruppen.map((value) => ({
+    params: {
+      slug: value.Slug,
+    },
+  }));
+}
+const { slug } = Astro.params;
+
+const werkgruppen = await getWerkgruppen();
+let werkgruppe;
+for (werkgruppe of werkgruppen) {
+  if (werkgruppe.Slug === slug) {
+    break;
+  }
+}
+
+const title = "Werkverzeichnis von Vollrad Kutscher 1968 bis 2000: " + werkgruppe?.Titel;
+---
+
+<Layout title={title}>
+  <main>
+    <h1>{title}</h1>
+    <div class="grid grid-cols-3 gap-3">
+      {
+        werkgruppe &&
+          werkgruppe.Records.map((werk) => (
+            <div><h1>{werk.fields.Titel}</h1><Card href="" title={werk.fields.Titel} body={werk.fields.Titel} /></div>
+          ))
+      }
+    </div>
+  </main>
+</Layout>

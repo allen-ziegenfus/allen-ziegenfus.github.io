@@ -1,4 +1,4 @@
-const headers = {
+﻿const headers = {
     Authorization: `Bearer ${import.meta.env.ACCESS_TOKEN}`,
 };
 
@@ -17,7 +17,7 @@ export async function listRecords(baseId: string, tableName: string) {
     while (!allRecordsFetched) {
         const fetchresponse = await fetch(uri, {
             method: 'GET',
-            headers: { ...headers, 'Content-Type': 'application/json' },
+            headers: { ...headers, 'Content-Type': 'application/json charset=utf-8;' },
         });
 
         if (fetchresponse.status != 200) {
