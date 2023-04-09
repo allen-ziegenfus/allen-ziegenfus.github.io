@@ -22,17 +22,28 @@ for (werkgruppe of werkgruppen) {
   }
 }
 
-const title = "Werkverzeichnis von Vollrad Kutscher 1968 bis 2000: " + werkgruppe?.Titel;
+const title =
+  "Werkverzeichnis von Vollrad Kutscher 1968 bis 2000: " + werkgruppe?.Titel;
 ---
 
 <Layout title={title}>
   <main>
     <h1>{title}</h1>
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-4 gap-4">
       {
         werkgruppe &&
           werkgruppe.Records.map((werk) => (
-            <div><h1>{werk.fields.Titel}</h1><Card href="" title={werk.fields.Titel} body={werk.fields.Titel} /></div>
+            <div>
+              <>
+                <h1>{werk.Titel}</h1>
+                <Card
+                  href={werk.Slug}
+                  title={werk.InvNr}
+                  body={werk.Titel}
+                  thumbnail={werk.Thumbnail}
+                />
+              </>
+            </div>
           ))
       }
     </div>
