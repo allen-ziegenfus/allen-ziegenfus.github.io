@@ -33,11 +33,9 @@ export async function getStaticPaths() {
   return paths;
 }
 const { work } = Astro.props;
-const title =
-  "Werkverzeichnis von Vollrad Kutscher 1968 bis 2000: " + work.Titel;
 ---
 
-<Layout title={title}>
+<Layout title={work.Titel}>
   <main class="flex">
     <div class="eigenschaften w-1/2">
       <h1>{work.Titel}</h1>

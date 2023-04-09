@@ -15,13 +15,10 @@ export async function getStaticPaths() {
 }
 const { werkgruppe } = Astro.props;
 
-const title =
-  "Werkverzeichnis von Vollrad Kutscher 1968 bis 2000: " + werkgruppe?.Titel;
 ---
 
-<Layout title={title}>
+<Layout title={werkgruppe.Titel}>
   <main>
-    <h1>{title}</h1>
     <div class="grid grid-cols-4 gap-4">
       {
         werkgruppe &&
