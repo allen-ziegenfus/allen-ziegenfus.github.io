@@ -1,6 +1,6 @@
 ---
 export interface Props {
-	title: string;
+  title: string;
 }
 
 const { title } = Astro.props;
@@ -8,17 +8,21 @@ const { title } = Astro.props;
 
 <!DOCTYPE html>
 <html lang="de">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>{title}</title>
-	</head>
-	<body class="max-w-6xl p-6 m-auto">
-		<header class="text-center">
-			<a href="/"><h1>Werkverzeichnis von Vollrad Kutscher 1968 bis 2000</h1></a>
-		</header>
-		<slot />
-	</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+  </head>
+  <body class="max-w-6xl m-auto p-6">
+    <header class="text-center py-3">
+      <a href="/"><h1>Werkverzeichnis von Vollrad Kutscher 1968 bis 2000</h1></a
+      >
+    </header>
+    <slot />
+    <footer class="py-3">
+      <p>Copyright © 2023 Vollradkutscher-Werkverzeichnis.de</p>
+    </footer>
+  </body>
 </html>
