@@ -32,10 +32,21 @@ const title =
 ---
 
 <Layout title={title}>
-  <main>
-    <h1>{title}</h1>
-    <h2>{work.InvNr}</h2>
-    <p>{work.Beschreibung}</p>
-    <p>{work.Material}</p>
+  <main class="flex">
+    <div class="eigenschaften w-1/2">
+      <h1>{work.Titel}</h1>
+      <h2>Inv. Nr.: {work.InvNr}</h2>
+      <h3>Eigenschaften</h3>
+      <p>Werkgruppe: {work.Werkgruppe}</p>
+      <p>Jahr: {work.Jahr}</p>
+      <p>Maße: {work.Maße}</p>
+      <p>Anzahl: {work.Anzahl}</p>
+      <p>Signatur: {work.Signatur}</p>
+      <p>Zustand: {work.Zustand}</p>
+      <p>Beschreibung: {work.Beschreibung}</p>
+      <p>Material: {work.Material}</p>
+      <p>Standort: {work.Standort}</p>
+    </div>
+    <div class="w-1/2"><img src={work.Thumbnail} /></div>
   </main>
 </Layout>
