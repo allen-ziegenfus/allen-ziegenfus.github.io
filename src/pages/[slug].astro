@@ -6,21 +6,14 @@ import { getWerkgruppen } from "../werkverzeichnis/werkgruppen";
 export async function getStaticPaths() {
   const werkgruppen = await getWerkgruppen();
 
-  return werkgruppen.map((value) => ({
+  return werkgruppen.map((werkgruppe) => ({
     params: {
-      slug: value.Slug,
+      slug: werkgruppe.Slug,
     },
+    props: { werkgruppe },
   }));
 }
-const { slug } = Astro.params;
-
-const werkgruppen = await getWerkgruppen();
-let werkgruppe;
-for (werkgruppe of werkgruppen) {
-  if (werkgruppe.Slug === slug) {
-    break;
-  }
-}
+const { werkgruppe } = Astro.props;
 
 const title =
   "Werkverzeichnis von Vollrad Kutscher 1968 bis 2000: " + werkgruppe?.Titel;
@@ -32,19 +25,21 @@ const title =
     <div class="grid grid-cols-4 gap-4">
       {
         werkgruppe &&
-          werkgruppe.Records.map((werk) => (
-            <div>
-              <>
-                <h1>{werk.Titel}</h1>
-                <Card
-                  href={werk.Slug}
-                  title={werk.InvNr}
-                  body={werk.Titel}
-                  thumbnail={werk.Thumbnail}
-                />
-              </>
-            </div>
-          ))
+          werkgruppe.Records.map(
+            (werk: {
+              Titel: string;
+              Slug: string;
+              InvNr: string;
+              Thumbnail: URL;
+            }) => (
+              <Card
+                href={werk.Slug}
+                title={werk.InvNr}
+                body={werk.Titel}
+                thumbnail={werk.Thumbnail}
+              />
+            )
+          )
       }
     </div>
   </main>

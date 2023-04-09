@@ -1,0 +1,41 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getWerkgruppen } from "../../werkverzeichnis/werkgruppen";
+
+export async function getStaticPaths() {
+  const werkgruppen = await getWerkgruppen();
+
+  const works = [];
+  for (const werkgruppe of werkgruppen) {
+    for (const Record of werkgruppe.Records) {
+      works.push({
+        workSlug: Record.Slug,
+        slug: werkgruppe.Slug,
+        work: Record,
+      });
+    }
+  }
+  return works.map((work) => ({
+    params: {
+      slug: work.slug,
+      workSlug: work.workSlug,
+    },
+    props: {
+      work: work.work,
+    },
+  }));
+}
+const { work } = Astro.props;
+
+const title =
+  "Werkverzeichnis von Vollrad Kutscher 1968 bis 2000: " + work.Titel;
+---
+
+<Layout title={title}>
+  <main>
+    <h1>{title}</h1>
+    <h2>{work.InvNr}</h2>
+    <p>{work.Beschreibung}</p>
+    <p>{work.Material}</p>
+  </main>
+</Layout>
