@@ -46,6 +46,7 @@ export async function getWerkgruppen() {
         ({
             id: record.id,
             InvNr: record.fields["Inv. Nr."],
+            InventoryNumber: record.fields["Inv. Nr."].replaceAll(/[^0-9]/g, ''),
             Slug: slugify(record.fields["Inv. Nr."], { lower: true }),
             Anzahl: record.fields.Anzahl,
             Werkgruppe: record.fields.Werkgruppe,
@@ -65,17 +66,20 @@ export async function getWerkgruppen() {
             Bibliographie: record.fields.Bibliographie,
             Bilder: record.fields?.Bild?.map((bild: { thumbnails: { large: { url: any; }; }; }) => bild?.thumbnails?.large?.url),
             Thumbnail: getSmallThumbnailURL(record.fields?.Bild?.slice(0, 1)[0]),
-
         })));
+
+        records.sort((a, b) => a.InventoryNumber - b.InventoryNumber);
 
         werkgruppenTemp.push({
             Titel: overviewRecord.fields.Titel,
             Slug: overviewRecord.fields.Slug,
             Thumbnail: getSmallThumbnailURL(overviewRecord.fields.Bild.slice(0, 1)[0]),
             Count: werkGruppenRecords.length,
-            Records: records
+            Records: records,
+            Reihenfolge: overviewRecord.fields.Reihenfolge
         })
     }
+    werkgruppenTemp.sort((a, b) => a.Reihenfolge - b.Reihenfolge);
 
     werkgruppen = werkgruppenTemp;
     return werkgruppen;

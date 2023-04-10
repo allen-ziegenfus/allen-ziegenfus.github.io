@@ -14,7 +14,7 @@ const { href, title, body, thumbnail } = Astro.props;
   <a class="flex flex-col" href={href}>
 
     <Img src={thumbnail ? thumbnail?.toString(): "/public/placeholder.png"} alt={title} />
-    <h2>
+    <h2 class="pt-2">
       {title}
     </h2>
     <p>
