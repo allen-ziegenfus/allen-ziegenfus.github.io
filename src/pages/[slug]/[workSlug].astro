@@ -36,11 +36,11 @@ const { work } = Astro.props;
 ---
 
 <Layout title={work.Titel}>
+  <h2 class="text-2xl py-3">{work.Titel}</h2>
   <main class="flex">
     <div class="eigenschaften w-1/2">
-      <h1>{work.Titel}</h1>
-      <h2>Inv. Nr.: {work.InvNr}</h2>
-      <h3>Eigenschaften</h3>
+      <h2 class="py-3">Inv. Nr.: {work.InvNr}</h2>
+      <h3 class="py-3">Eigenschaften</h3>
       <p>Werkgruppe: {work.Werkgruppe}</p>
       <p>Jahr: {work.Jahr}</p>
       <p>Maße: {work.Maße}</p>
@@ -58,7 +58,10 @@ const { work } = Astro.props;
       <p>Bibliographie: {work.Bibliographie}</p>
     </div>
     <div class="w-1/2">
-      <Img src={work.Thumbnail ? work.Thumbnail: "/public/placeholder.png"} alt={work.Titel} />
+      <Img
+        src={work.Thumbnail ? work.Thumbnail : "/public/placeholder.png"}
+        alt={work.Titel}
+      />
     </div>
   </main>
 </Layout>
