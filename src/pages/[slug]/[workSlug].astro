@@ -58,7 +58,7 @@ const { work } = Astro.props;
       <p>Bibliographie: {work.Bibliographie}</p>
     </div>
     <div class="w-1/2">
-      {work.Thumbnail && <Img src={work.Thumbnail} alt={work.Titel} />}
+      <Img src={work.Thumbnail ? work.Thumbnail: "/public/placeholder.png"} alt={work.Titel} />
     </div>
   </main>
 </Layout>

@@ -10,10 +10,10 @@ export interface Props {
 const { href, title, body, thumbnail } = Astro.props;
 ---
 
-<li class="list-none border p-3 text-center">
+<li class="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600">
   <a class="flex flex-col" href={href}>
 
-    {thumbnail && <Img src={thumbnail?.toString()} alt={title} />}
+    <Img src={thumbnail ? thumbnail?.toString(): "/public/placeholder.png"} alt={title} />
     <h2>
       {title}
     </h2>
