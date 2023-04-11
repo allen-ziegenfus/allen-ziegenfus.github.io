@@ -69,7 +69,6 @@ export async function getWerkgruppen() {
         })));
 
         records.sort((a, b) => a.InventoryNumber - b.InventoryNumber);
-
         werkgruppenTemp.push({
             Titel: overviewRecord.fields.Titel,
             Slug: overviewRecord.fields.Slug,
@@ -86,5 +85,5 @@ export async function getWerkgruppen() {
 }
 
 function getSmallThumbnailURL(attachment: any) {
-    return attachment?.thumbnails?.large?.url;
+    return attachment?.thumbnails?.large?.url || "/public/placeholder.png";
 }

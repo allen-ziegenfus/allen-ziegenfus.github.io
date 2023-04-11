@@ -1,6 +1,7 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { Img } from "astro-imagetools/components";
+import { importRemoteImage } from "astro-imagetools/api";
+import ImageViewer from "../../components/ImageViewer.jsx";
 import {
   getWerkgruppen,
   Work,
@@ -33,6 +34,15 @@ export async function getStaticPaths() {
   return paths;
 }
 const { work } = Astro.props;
+
+const imgs = await Promise.all(
+  work?.Bilder?.map(async (bild) => {
+    const remoteImage = await importRemoteImage(bild + "?format=webp");
+    return {
+      src: remoteImage,
+    };
+  }) || [ { src: "/placeholder.png"}]
+);
 ---
 
 <Layout title={work.Titel}>
@@ -58,10 +68,7 @@ const { work } = Astro.props;
       <p>Bibliographie: {work.Bibliographie}</p>
     </div>
     <div class="w-1/2">
-      <Img
-        src={work.Thumbnail ? work.Thumbnail : "/public/placeholder.png"}
-        alt={work.Titel}
-      />
+      <ImageViewer client:load imgs={imgs} title={work.Titel} />
     </div>
   </main>
 </Layout>
