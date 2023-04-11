@@ -1,5 +1,6 @@
 ﻿import { listOverviewRecords, listRecords } from '../airtable/airtable';
 import slugify from "slugify"
+import { importRemoteImage } from "astro-imagetools/api";
 //import.meta.env.DEV
 
 export type Work = {
@@ -85,5 +86,5 @@ export async function getWerkgruppen() {
 }
 
 function getSmallThumbnailURL(attachment: any) {
-    return attachment?.thumbnails?.large?.url || "/public/placeholder.png";
+    return attachment?.thumbnails?.large?.url || "/placeholder.png";
 }
