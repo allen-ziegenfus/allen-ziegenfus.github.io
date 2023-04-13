@@ -49,6 +49,7 @@ export async function getWerkgruppen() {
             InvNr: record.fields["Inv. Nr."],
             InventoryNumber: record.fields["Inv. Nr."].replaceAll(/[^0-9]/g, ''),
             Slug: slugify(record.fields["Inv. Nr."], { lower: true }),
+            WerkgruppeSlug: overviewRecord.fields.Slug,
             Anzahl: record.fields.Anzahl,
             Werkgruppe: record.fields.Werkgruppe,
             Maße: record.fields.Maße,

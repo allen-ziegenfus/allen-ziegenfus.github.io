@@ -39,7 +39,7 @@ export default function SearchBar({ records}) {
                   setDisplayRows(
                     searchResults.slice(0, 8).map((searchResult) => ({
                       Titel: searchResult.item.Titel,
-                      Slug: searchResult.item.Slug,
+                      Slug: `/${searchResult.item.WerkgruppeSlug}/${searchResult.item.Slug}`,
                       DownloadedThumbnail: searchResult.item.DownloadedThumbnail,
                       InvNr: searchResult.item.InvNr,
                     }))
