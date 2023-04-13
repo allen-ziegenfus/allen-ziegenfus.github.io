@@ -1,12 +1,12 @@
 import { React, useState } from "react";
 import Fuse from "fuse.js";
 
-export default function SearchBar({ fuseData }) {
+export default function SearchBar({ records}) {
   const [searchInput, setSearchInput] = useState();
   const [displayRows, setDisplayRows] = useState([]);
   const [open, setOpen] = useState(false);
 
-  const fuse = new Fuse(fuseData, {
+  const fuse = new Fuse(records, {
     threshold: 0.4,
     minMatchCharLength: 2,
     keys: [
@@ -20,7 +20,7 @@ export default function SearchBar({ fuseData }) {
   });
 
   if (!open) {
-    return <button onClick={() => setOpen(true)}>Suchen</button>;
+    return   <button onClick={() => setOpen(true)} className="absolute py-5 right-0 top-0 ml-auto">🔍</button>
   } else {
     return (
       <div className="fixed top-0 bottom-0 left-0 right-0 bg-black">
@@ -40,7 +40,7 @@ export default function SearchBar({ fuseData }) {
                     searchResults.slice(0, 8).map((searchResult) => ({
                       Titel: searchResult.item.Titel,
                       Slug: searchResult.item.Slug,
-                      Thumbnail: searchResult.item.Thumbnail,
+                      DownloadedThumbnail: searchResult.item.DownloadedThumbnail,
                       InvNr: searchResult.item.InvNr,
                     }))
                   );
@@ -61,7 +61,7 @@ export default function SearchBar({ fuseData }) {
               displayRows.map((row) => (
                 <li className="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600">
                   <a className="flex flex-col" href={row.Slug}>
-                    <img src={row.Thumbnail} alt={row.Titel} />
+                    <img src={row.DownloadedThumbnail} alt={row.Titel} />
                     <h2 className="pt-2">{row.Titel}</h2>
                     <h3 className="pt-2">{row.InvNr}</h3>
                   </a>

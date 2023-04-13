@@ -2,7 +2,6 @@
 import Layout from "../../layouts/Layout.astro";
 import { importRemoteImage } from "astro-imagetools/api";
 import ImageViewer from "../../components/ImageViewer.jsx";
-import SearchBar from "../../components/SearchBar.jsx";
 import {
   getWerkgruppen,
   Work,
@@ -48,8 +47,7 @@ const imgs = await Promise.all(
 );
 ---
 
-<Layout title={work.Titel}>
-  <SearchBar client:load fuseData={records}></SearchBar>
+<Layout title={work.Titel}>  
   <h2 class="text-2xl py-3">{work.Titel}</h2>
   <main class="flex">
     <div class="eigenschaften w-1/2">
