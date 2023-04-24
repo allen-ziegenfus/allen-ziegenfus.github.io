@@ -49,8 +49,8 @@ const imgs = await Promise.all(
 
 <Layout title={work.Titel}>  
   <h2 class="text-2xl py-3">{work.Titel}</h2>
-  <main class="flex">
-    <div class="eigenschaften w-1/2">
+  <main class="flex flex-col-reverse lg:flex-row">
+    <div class="eigenschaften w-full lg:w-1/2">
       <h2 class="py-3 text-xl">Inv. Nr.: {work.InvNr}</h2>
       <h3 class="py-3 text-xl">Eigenschaften</h3>
       <p>Werkgruppe: {work.Werkgruppe}</p>
@@ -69,7 +69,7 @@ const imgs = await Promise.all(
       <p>Literatur: {work.Literatur}</p>
       <p>Bibliographie: {work.Bibliographie}</p>
     </div>
-    <div class="w-1/2">
+    <div class="w-full lg:w-1/2">
       <ImageViewer client:load imgs={imgs} title={work.Titel} />
     </div>
   </main>
