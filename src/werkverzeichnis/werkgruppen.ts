@@ -1,7 +1,5 @@
 ﻿import { listOverviewRecords, listRecords } from '../airtable/airtable';
 import slugify from "slugify"
-import { importRemoteImage } from "astro-imagetools/api";
-//import.meta.env.DEV
 
 export type Work = {
     id: string,
