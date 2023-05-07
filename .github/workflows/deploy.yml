@@ -23,7 +23,6 @@ jobs:
       - name: Install, build, and upload your site
         uses: withastro/action@v0
         with:
-            env:
                 ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
                 WORKSPACE_ID: ${{ secrets.WORKSPACE_ID }}
                 BASE_ID: ${{ secrets.BASE_ID }}
