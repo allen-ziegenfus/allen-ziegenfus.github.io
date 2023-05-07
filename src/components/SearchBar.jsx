@@ -1,10 +1,21 @@
-import { React, useState } from "react";
+import { React, useEffect, useState } from "react";
 import Fuse from "fuse.js";
 
-export default function SearchBar({ records}) {
+export default function SearchBar({}) {
   const [searchInput, setSearchInput] = useState();
   const [displayRows, setDisplayRows] = useState([]);
+  const [records, setRecords] = useState([])
   const [open, setOpen] = useState(false);
+
+  useEffect(async () => {
+    try {
+      const recordsresponse = await fetch("/records.json")
+      setRecords(await recordsresponse.json());
+    }
+    catch (error) {
+      console.log(error);
+    }
+  }, {});
 
   const fuse = new Fuse(records, {
     threshold: 0.4,
@@ -40,7 +51,7 @@ export default function SearchBar({ records}) {
                     searchResults.slice(0, 8).map((searchResult) => ({
                       Titel: searchResult.item.Titel,
                       Slug: `/${searchResult.item.WerkgruppeSlug}/${searchResult.item.Slug}`,
-                      DownloadedThumbnail: searchResult.item.DownloadedThumbnail,
+                      Thumbnail: searchResult.item.Thumbnail,
                       InvNr: searchResult.item.InvNr,
                     }))
                   );
@@ -61,7 +72,7 @@ export default function SearchBar({ records}) {
               displayRows.map((row) => (
                 <li className="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600">
                   <a className="flex flex-col" href={row.Slug}>
-                    <img src={row.DownloadedThumbnail} alt={row.Titel} />
+                    <img src={row.Thumbnail} alt={row.Titel} />
                     <h2 className="pt-2">{row.Titel}</h2>
                     <h3 className="pt-2">{row.InvNr}</h3>
                   </a>

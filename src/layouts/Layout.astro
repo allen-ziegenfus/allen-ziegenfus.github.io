@@ -1,29 +1,11 @@
 ---
 import SearchBar from "../components/SearchBar.jsx";
-import {
-  Work, getWerkgruppen
-} from "../werkverzeichnis/werkgruppen";
-import { importRemoteImage } from "astro-imagetools/api";
 export interface Props {
   title: string;
 }
 
 const { title} = Astro.props;
 
-const werkgruppen = await getWerkgruppen();
-
-let records = [];
-
-werkgruppen.forEach(
-  (workgroup) => (records = records.concat(workgroup.Records))
-);
-
-for (const record of records) {
-  record.DownloadedThumbnail = record.Thumbnail
-  if (record.Thumbnail.includes("http")) {
-    record.DownloadedThumbnail = await importRemoteImage(record.Thumbnail);
-  }
-}
 ---
 
 <!DOCTYPE html>
@@ -39,7 +21,7 @@ for (const record of records) {
     <header class="text-center py-5 relative">
       <a href="/"><h1 class="text-2xl">Werkverzeichnis von Vollrad Kutscher 1968 bis 2000</h1></a
       >
-      <SearchBar client:load records={records}></SearchBar>
+      <SearchBar client:load></SearchBar>
     </header>
     <slot />
     <footer class="py-3">

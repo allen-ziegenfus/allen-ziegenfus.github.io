@@ -1,6 +1,5 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { importRemoteImage } from "astro-imagetools/api";
 import ImageViewer from "../../components/ImageViewer.jsx";
 import {
   getWerkgruppen,
@@ -39,9 +38,8 @@ const { work, records } = Astro.props;
 
 const imgs = await Promise.all(
   work?.Bilder?.map(async (bild) => {
-    const remoteImage = await importRemoteImage(bild + "?format=webp");
     return {
-      src: remoteImage,
+      src: bild,
     };
   }) || [ { src: "/placeholder.png"}]
 );
