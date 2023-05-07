@@ -2,6 +2,7 @@
 import slugify from "slugify"
 import fs from "fs";
 import https from "https";
+import axios from "axios";
 import sharp from "sharp";
 export type Work = {
     id: string,
@@ -32,6 +33,13 @@ export type Workgroup = {
 }
 let werkgruppen: Workgroup[] = [];
 
+async function getBilder(Bild) {
+
+  if (!Bild) {
+    return [ "/placeholder.png"];
+  }
+  return await Promise.all(Bild.map((async bild => await getAttachmentURL(bild))));
+}
 async function performGetWerkgruppen() {
     await fs.promises.mkdir("./public/images", {recursive: true})
     if (werkgruppen.length > 0) {
@@ -47,7 +55,7 @@ async function performGetWerkgruppen() {
 
           const filteredWerkgruppenRecords = werkGruppenRecords.filter(record => 
             record.fields && record.fields["Inv. Nr."])          ;
-          const records = filteredWerkgruppenRecords?.map((record =>
+          const records =  await Promise.all(filteredWerkgruppenRecords?.map((async record =>
           ({
               id: record.id,
               InvNr: record.fields["Inv. Nr."],
@@ -70,15 +78,15 @@ async function performGetWerkgruppen() {
               Ausstellung: record.fields.Ausstellung,
               Literatur: record.fields.Literatur,
               Bibliographie: record.fields.Bibliographie,
-              Bilder: record.fields?.Bild?.map((bild: { thumbnails: { large: { url: any; }; }; }) => getAttachmentURL(bild)),
-              Thumbnail: getAttachmentURL(record.fields?.Bild?.slice(0, 1)[0]),
-          })));
+              Bilder: await getBilder(record.fields?.Bild),
+              Thumbnail: await getAttachmentURL(record.fields?.Bild?.slice(0, 1)[0]),
+          }))));
 
           records.sort((a, b) => a.InventoryNumber - b.InventoryNumber);
           werkgruppenTemp.push({
               Titel: overviewRecord.fields.Titel,
               Slug: overviewRecord.fields.Slug,
-              Thumbnail: getAttachmentURL(overviewRecord.fields.Bild.slice(0, 1)[0]),
+              Thumbnail: await getAttachmentURL(overviewRecord.fields.Bild.slice(0, 1)[0]),
               Count: werkGruppenRecords.length,
               Records: records,
               Reihenfolge: overviewRecord.fields.Reihenfolge
@@ -122,24 +130,31 @@ const downloadFile = async (url, filepath, onSuccess, onError) => {
     pipeline.webp().toFile(filepath);
 
     https
-      .get(url, response => {
-        response.pipe(pipeline);
-        pipeline.on("finish", () => {
-          onSuccess && onSuccess();
-        });
-      })
-      .on("error", fileErr => {
-        console.log(fileErr);
-        fs.unlink(filepath, error => onError && onError(error));
+    .get(url, response => {
+      response.pipe(pipeline);
+      pipeline.on("finish", () => {
+        onSuccess && onSuccess();
       });
+    })
+    .on("error", fileErr => {
+      console.log(fileErr);
+      fs.unlink(filepath, error => onError && onError(error));
+    });
+
+    //const {data} = await axios.get(url);
+    //data.pipe(pipeline);
   };
 
-function getAttachmentURL(attachment: any) {
-
+async function getAttachmentURL(attachment: any) {
     let url = "/placeholder.png";
     if ( attachment?.thumbnails?.large?.url) {
-        const new_filename = `images/${attachment.id}-${attachment.filename}.webp`
-        downloadFile(attachment?.thumbnails?.large?.url, `./public/${new_filename}`, () => {}, () => {})
+        const new_filename = `images/${attachment.id}.webp`
+        try {
+          await downloadFile(attachment?.thumbnails?.large?.url, `./public/${new_filename}`, () => {}, () => {})
+        }
+        catch (error) {
+          return url;
+        }
         return `/${new_filename}`;
     }
     return url;

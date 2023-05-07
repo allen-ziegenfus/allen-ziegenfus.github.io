@@ -7,7 +7,7 @@ export default function ImageViewer({ imgs, title }) {
   const [index, setIndex] = useState(0);
   return (
     <>
-      <img src={imgs[0].src} alt={title} />
+      <img src={imgs[0]?.src} alt={title} />
       <div className="flex">
         {imgs.length > 1 &&
           imgs.map((img, index) => (
