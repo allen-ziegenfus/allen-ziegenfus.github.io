@@ -2,7 +2,6 @@
 import slugify from "slugify"
 import fs from "fs";
 import https from "https";
-import axios from "axios";
 import sharp from "sharp";
 export type Work = {
     id: string,
@@ -131,20 +130,19 @@ const downloadFile = async (url, filepath, onSuccess, onError) => {
     const pipeline = sharp();
     pipeline.webp().toFile(filepath);
 
+    return new Promise((resolve, reject) => 
     https
     .get(url, response => {
       response.pipe(pipeline);
       pipeline.on("finish", () => {
-        onSuccess && onSuccess();
+        resolve(true);
       });
     })
     .on("error", fileErr => {
       console.log(fileErr);
       fs.unlink(filepath, error => onError && onError(error));
-    });
-
-    //const {data} = await axios.get(url);
-    //data.pipe(pipeline);
+      reject(fileErr);
+    }));
   };
 
 async function getAttachmentURL(attachment: any) {
