@@ -42,6 +42,7 @@ async function getBilder(Bild) {
 }
 async function performGetWerkgruppen() {
     await fs.promises.mkdir("./public/images", {recursive: true})
+    await fs.promises.mkdir("./dist/images", {recursive: true})
     if (werkgruppen.length > 0) {
         console.log("Returning already fetched records");
         return werkgruppen;
