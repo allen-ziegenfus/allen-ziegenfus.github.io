@@ -152,7 +152,7 @@ async function getAttachmentURL(attachment: any) {
         const new_filename = `images/${attachment.id}.webp`
         try {
           await downloadFile(attachment?.thumbnails?.large?.url, `./public/${new_filename}`, () => {}, () => {})
-          await downloadFile(attachment?.thumbnails?.large?.url, `./dist/${new_filename}`, () => {}, () => {})
+          await fs.promises.copyFile( `./public/${new_filename}`,  `./dist/${new_filename}`)
         }
         catch (error) {
           return url;
