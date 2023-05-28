@@ -1,9 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Card from "../components/Card.astro";
-import { getWerkgruppen } from "../werkverzeichnis/werkgruppen";
+import werkgruppen from "../../public/werkgruppen.json";
 
-const werkgruppen = await getWerkgruppen();
 ---
 
 <Layout title="Werkverzeichnis von Vollrad Kutscher 1968 bis 2000">

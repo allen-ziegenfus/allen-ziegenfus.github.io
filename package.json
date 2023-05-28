@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "build": "yarn airtable-assets && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "airtable-assets": "ts-node --esm --project airtable-assets-tsconfig.json src/werkverzeichnis/werkgruppen.ts"
   },
   "dependencies": {
     "@astrojs/react": "^2.1.1",
@@ -16,12 +17,15 @@
     "@types/react-dom": "^18.0.6",
     "astro": "^2.2.0",
     "astro-imagetools": "^0.8.1",
+    "axios": "^1.4.0",
+    "dotenv": "^16.0.3",
     "fuse.js": "^6.6.2",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "sharp": "^0.32.1",
     "slugify": "^1.6.6",
     "tailwindcss": "^3.0.24",
+    "ts-node": "^10.9.1",
     "yet-another-react-lightbox": "^3.4.0"
   }
 }

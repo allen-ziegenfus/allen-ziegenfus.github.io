@@ -1,0 +1,10 @@
+{
+  "types": ["env.d.ts"],
+  "compilerOptions": {
+    "noImplicitUseStrict": true,
+    "target": "ES2017",
+    "module": "nodenext",
+    "strict": false
+  },
+  "include": ["src/env.d.ts"]
+}

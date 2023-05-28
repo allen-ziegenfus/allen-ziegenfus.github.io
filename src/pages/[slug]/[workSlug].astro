@@ -1,14 +1,9 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import ImageViewer from "../../components/ImageViewer.jsx";
-import {
-  getWerkgruppen,
-  Work,
-  Workgroup,
-} from "../../werkverzeichnis/werkgruppen";
+import werkgruppen from "../../../public/werkgruppen.json";
 
 export async function getStaticPaths() {
-  const werkgruppen = await getWerkgruppen();
 
   const works = [];
   for (const werkgruppe of werkgruppen) {

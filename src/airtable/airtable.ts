@@ -1,12 +1,8 @@
-﻿const headers = {
-    Authorization: `Bearer ${import.meta.env.ACCESS_TOKEN}`,
-};
-
-export async function listOverviewRecords() {
-    return listRecords(import.meta.env.BASE_ID, import.meta.env.TABLE_NAME);
+﻿export async function listOverviewRecords() {
+    return listRecords(process.env.BASE_ID, process.env.TABLE_NAME);
 }
 
-export async function listRecords(baseId: string, tableName: string) {
+export async function listRecords(baseId: string, tableName: string) {  
     console.log(`Listing records in base ${baseId} table ${tableName}`);
     const records = [];
 
@@ -17,7 +13,7 @@ export async function listRecords(baseId: string, tableName: string) {
     while (!allRecordsFetched) {
         const fetchresponse = await fetch(uri, {
             method: 'GET',
-            headers: { ...headers, 'Content-Type': 'application/json charset=utf-8;' },
+            headers: { Authorization: `Bearer ${process.env.ACCESS_TOKEN}`, 'Content-Type': 'application/json charset=utf-8;' },
         });
 
         if (fetchresponse.status != 200) {
