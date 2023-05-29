@@ -4,15 +4,15 @@ import ImageViewer from "../../components/ImageViewer.jsx";
 import werkgruppen from "../../../public/werkgruppen.json";
 
 export async function getStaticPaths() {
-
   const works = [];
   for (const werkgruppe of werkgruppen) {
     for (const Record of werkgruppe.Records) {
       works.push({
         workSlug: Record.Slug,
         slug: werkgruppe.Slug,
+        titel: werkgruppe.Titel,
         work: Record,
-        records: werkgruppe.Records
+        records: werkgruppe.Records,
       });
     }
   }
@@ -23,30 +23,41 @@ export async function getStaticPaths() {
     },
     props: {
       work: work.work,
-      records: work.records
+      records: work.records,
+      slug: work.slug,
+      workSlug: work.workSlug,
+      titel: work.titel,
     },
   }));
 
   return paths;
 }
-const { work, records } = Astro.props;
+const { work, records, slug, workSlug, titel } = Astro.props;
 
 const imgs = await Promise.all(
   work?.Bilder?.map(async (bild) => {
     return {
       src: bild,
     };
-  }) || [ { src: "/placeholder.png"}]
+  }) || [{ src: "/placeholder.png" }]
 );
 ---
 
-<Layout title={work.Titel}>  
+<Layout title={work.Titel}>
+  
+  <nav>
+    <ul class="flex flex-row">
+      <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
+      <li><a class="text-blue-800" href={`/${slug}`}> {titel}</a>&nbsp; / &nbsp;</li>
+      <li><a class="text-blue-800" href={`/${slug}/${workSlug}`}>{work.InvNr}</a></li>
+    </ul>
+  </nav>
   <h2 class="text-2xl py-3">{work.Titel}</h2>
   <main class="flex flex-col-reverse lg:flex-row">
     <div class="eigenschaften w-full lg:w-1/2">
       <h2 class="py-3 text-xl">Inv. Nr.: {work.InvNr}</h2>
       <h3 class="py-3 text-xl">Eigenschaften</h3>
-      <p>Werkgruppe: {work.Werkgruppe}</p>
+      <p>Werkgruppe: <a class="text-blue-800" href={`/${slug}`}> {work.Werkgruppe}</a></p>
       <p>Jahr: {work.Jahr}</p>
       <p>Maße: {work.Maße}</p>
       <p>Anzahl: {work.Anzahl}</p>
