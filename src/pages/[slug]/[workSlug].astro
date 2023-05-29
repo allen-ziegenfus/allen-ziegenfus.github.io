@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import ImageViewer from "../../components/ImageViewer.jsx";
 import werkgruppen from "../../../public/werkgruppen.json";
+import SearchNavigation from "../../components/SearchNavigation";
 
 export async function getStaticPaths() {
   const works = [];
@@ -45,6 +46,7 @@ const imgs = await Promise.all(
 
 <Layout title={work.Titel}>
   
+  <SearchNavigation client:only />
   <nav>
     <ul class="flex flex-row">
       <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
@@ -52,6 +54,7 @@ const imgs = await Promise.all(
       <li><a class="text-blue-800" href={`/${slug}/${workSlug}`}>{work.InvNr}</a></li>
     </ul>
   </nav>
+  
   <h2 class="text-2xl py-3">{work.Titel}</h2>
   <main class="flex flex-col-reverse lg:flex-row">
     <div class="eigenschaften w-full lg:w-1/2">

@@ -2,20 +2,49 @@ import { React, useEffect, useState } from "react";
 import Fuse from "fuse.js";
 
 export default function SearchBar({}) {
-  const [searchInput, setSearchInput] = useState();
+  const urlParams = new URLSearchParams(window.location.search);
+  const search = urlParams.get("search");
+
+  const [searchInput, setSearchInput] = useState(search || "");
   const [displayRows, setDisplayRows] = useState([]);
-  const [records, setRecords] = useState([])
+  const [records, setRecords] = useState([]);
   const [open, setOpen] = useState(false);
 
-  useEffect(async () => {
-    try {
-      const recordsresponse = await fetch("/records.json")
-      setRecords(await recordsresponse.json());
+  function openSearch(e) {
+    setOpen(true);
+  }
+  useEffect(() => {
+    window.addEventListener("openSearch", openSearch);
+    return () => window.removeEventListener("openSearch", openSearch);
+  }, []);
+
+  useEffect(() => {
+    function performSearch() {
+      const searchResults = fuse.search(searchInput);
+      if (searchResults) {
+        setDisplayRows(
+          searchResults.slice(0, 8).map((searchResult) => ({
+            Titel: searchResult.item.Titel,
+            Slug: `/${searchResult.item.WerkgruppeSlug}/${searchResult.item.Slug}`,
+            Thumbnail: searchResult.item.Thumbnail,
+            InvNr: searchResult.item.InvNr,
+          }))
+        );
+      }
     }
-    catch (error) {
-      console.log(error);
+    performSearch();
+  }, [searchInput, records]);
+  useEffect(() => {
+    async function fetchRecords() {
+      try {
+        const recordsresponse = await fetch("/records.json");
+        setRecords(await recordsresponse.json());
+      } catch (error) {
+        console.log(error);
+      }
     }
-  }, {});
+    fetchRecords();
+  }, []);
 
   const fuse = new Fuse(records, {
     threshold: 0.4,
@@ -31,7 +60,14 @@ export default function SearchBar({}) {
   });
 
   if (!open) {
-    return   <button onClick={() => setOpen(true)} className="absolute py-5 right-0 top-0 ml-auto">🔍</button>
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="absolute py-5 right-0 top-0 ml-auto"
+      >
+        🔍
+      </button>
+    );
   } else {
     return (
       <div className="fixed top-0 bottom-0 left-0 right-0 bg-black">
@@ -39,23 +75,12 @@ export default function SearchBar({}) {
           <input
             className="flex my-5 mx-auto w-1/2 h-10 rounded-lg p-2"
             placeholder="Suchen"
+            value={searchInput}
             onChange={(e) => {
               const searchTerm = e.target.value;
               setSearchInput(searchTerm);
               if (searchTerm) {
-                const searchResults = fuse.search(searchTerm);
-                console.log(searchResults);
-                setSearchInput(searchTerm);
-                if (searchResults) {
-                  setDisplayRows(
-                    searchResults.slice(0, 8).map((searchResult) => ({
-                      Titel: searchResult.item.Titel,
-                      Slug: `/${searchResult.item.WerkgruppeSlug}/${searchResult.item.Slug}`,
-                      Thumbnail: searchResult.item.Thumbnail,
-                      InvNr: searchResult.item.InvNr,
-                    }))
-                  );
-                }
+                performSearch();
               } else {
                 setDisplayRows([]);
                 setSearchInput("");
@@ -71,7 +96,10 @@ export default function SearchBar({}) {
             {displayRows.length > 1 &&
               displayRows.map((row) => (
                 <li className="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600">
-                  <a className="flex flex-col" href={row.Slug}>
+                  <a
+                    className="flex flex-col"
+                    href={`${row.Slug}/?search=${searchInput}`}
+                  >
                     <img src={row.Thumbnail} alt={row.Titel} />
                     <h2 className="pt-2">{row.Titel}</h2>
                     <h3 className="pt-2">{row.InvNr}</h3>
