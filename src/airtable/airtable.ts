@@ -2,7 +2,11 @@
     return listRecords(process.env.BASE_ID, process.env.TABLE_NAME);
 }
 
-export async function listRecords(baseId: string, tableName: string) {  
+export async function listPageRecords() {
+    return listRecords(process.env.BASE_ID, "Seiten");
+}
+
+export async function listRecords(baseId: string, tableName: string) : Promise< {id: string, fields: { [key: string]: any}}[]>{  
     console.log(`Listing records in base ${baseId} table ${tableName}`);
     const records = [];
 

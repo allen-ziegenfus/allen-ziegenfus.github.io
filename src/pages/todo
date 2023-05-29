@@ -1,7 +1,7 @@
 - put website title in config somewhere
 - pagination
 - favicon
-- metadata like description, etc.
+- metadata like description, etc.ß
 - cookie banner
 - static pages
 - add link to werkgruppe
@@ -12,3 +12,10 @@ http://localhost:3000/installationen/inst1570
 - mobile / tablet styling
 - transpile searchbar?
 get axios working
+
+
+shift alt - r does something strange - brings up popup?
+
+
+https://github.com/aaron9000/react-image-timeline
+https://apexcharts.com/react-chart-demos/timeline-charts/dumbbell-chart-horizontal/

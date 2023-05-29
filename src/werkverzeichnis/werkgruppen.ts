@@ -1,8 +1,8 @@
-﻿import { listOverviewRecords, listRecords } from '../airtable/airtable.js';
+﻿import { listOverviewRecords, listRecords, listPageRecords } from '../airtable/airtable.js';
 import * as dotenv from 'dotenv'
 import * as fs from "fs";
 import axios from "axios";
-import sharp from "sharp";
+import sharp, { bool } from "sharp";
 import { finished } from "node:stream/promises"
 import { slugify } from './slugify.js';
 dotenv.config()
@@ -46,12 +46,48 @@ async function getBilder(Bild: any, slug: string) {
     return ["/placeholder.png"];
   }
 
-  const Bilder=[];
+  const Bilder = [];
   let index = 1;
   for (const bild of Bild) {
     Bilder.push(await getAttachmentURL(bild, slug, index++));
   }
   return Bilder;
+}
+async function getPages() {
+  const pages = [];
+  const pageRecords = await listPageRecords();
+  for (const pageRecord of pageRecords) {
+
+    try {
+      const individualPageRecords = await listRecords(process.env.BASE_ID, pageRecord.fields.Table);
+      const reihenfolge = pageRecord.fields.Reihenfolge;
+      const page = {};
+      const pageRecords = []
+      let isTable = false;
+      for (const individualPageRecord of individualPageRecords) {
+        const pageRecord = {};
+        for (const field in individualPageRecord.fields) {
+            pageRecord[field] = individualPageRecord.fields[field]; 
+            if (field === 'Spalte1') { isTable = true}
+        }
+        pageRecords.push(pageRecord);
+
+      }
+      pageRecords.sort((a, b) => a?.Reihenfolge ? a?.Reihenfolge - b?.Reihenfolge : 0);
+      page["Name"] = pageRecord.fields.Table;
+      page["Records"] = pageRecords;
+      page["Slug"] = `${slugify(pageRecord.fields.Table, {lower: true})}`;
+      page["isTable"] = isTable;
+      page["Reihenfolge"] = reihenfolge;
+      pages.push(page);
+    }
+    catch (error) {
+      console.log("error fetching records", error)
+    }
+  }
+
+  pages.sort((a, b) => a.Reihenfolge - b.Reihenfolge);
+  await fs.promises.writeFile("./public/pages.json", JSON.stringify(pages));
 }
 async function performGetWerkgruppen() {
 
@@ -144,6 +180,7 @@ async function performGetWerkgruppen() {
 
 const werkgruppenPromise = performGetWerkgruppen();
 
+await getPages();
 await werkgruppenPromise;
 
 export async function getWerkgruppen() {

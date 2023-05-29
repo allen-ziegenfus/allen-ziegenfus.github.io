@@ -1,0 +1,39 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import pages from "../../../public/pages.json";
+
+export async function getStaticPaths() {
+
+  return pages.map((page) => ({
+    params: {
+      slug: page.Slug,
+    },
+    props: { page },
+  }));
+}
+const { page } = Astro.props;
+
+---
+
+<Layout title={page.Name}>
+  <main class="my-4">
+    <h2 class="text-2xl py-3">{page.Name}</h2> 
+    <div>
+      {
+        page.isTable && (
+          <div class="grid grid-cols-4 gap-4">
+            {page.Records.map((pagerecord) => 
+              <div>{pagerecord.Spalte1}</div>
+              <div class="col-span-3"> {pagerecord.Spalte2}</div>
+            )
+            }
+          </div>
+        )
+      }
+      {!page.isTable && (
+        page.Records.map((pagerecord) => <div class="my-2">{pagerecord?.Text}</div>)
+        )
+      }
+    </div>
+  </main>
+</Layout>

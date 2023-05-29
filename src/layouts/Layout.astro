@@ -1,6 +1,7 @@
 ---
 import SearchBar from "../components/SearchBar.jsx";
 import werkgruppen from "../../public/werkgruppen.json";
+import pages from "../../public/pages.json";
 export interface Props {
   title: string;
 }
@@ -26,6 +27,21 @@ const { title } = Astro.props;
       >
       <SearchBar client:load />
     </header>
+    <nav>
+      <ul class="flex flex-row flex-wrap bg-gray-200 py-4 px-2 my-3 justify-center">
+        {
+          pages.map((page) => (
+            <li>
+              <a
+                class="px-3 py-2 hover:bg-gray-800 hover:text-white cursor-pointer"
+                href={`/allgemein/${page.Slug}`}
+              >
+                {page.Name}
+              </a>
+            </li>
+          ))
+        }
+    </nav>
     <nav>
       <ul class="flex flex-row flex-wrap bg-gray-200 py-4 px-2 my-3">
         {
