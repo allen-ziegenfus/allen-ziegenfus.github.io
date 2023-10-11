@@ -60,21 +60,21 @@ const imgs = await Promise.all(
     <div class="eigenschaften w-full lg:w-1/2">
       <h2 class="py-3 text-xl">Inv. Nr.: {work.InvNr}</h2>
       <h3 class="py-3 text-xl">Eigenschaften</h3>
-      <p>Werkgruppe: <a class="text-blue-800" href={`/${slug}`}> {work.Werkgruppe}</a></p>
-      <p>Jahr: {work.Jahr}</p>
-      <p>Maße: {work.Maße}</p>
-      <p>Anzahl: {work.Anzahl}</p>
-      <p>Signatur: {work.Signatur}</p>
-      <p>Zustand: {work.Zustand}</p>
-      <p>Beschreibung: {work.Beschreibung}</p>
-      <p>Material: {work.Material}</p>
-      <p>Standort: {work.Standort}</p>
-      <p>Technik: {work.Technik}</p>
-      <p>Auflage: {work.Auflage}</p>
-      <p>Foto: {work.Foto}</p>
-      <p>Ausstellung: {work.Ausstellung}</p>
-      <p>Literatur: {work.Literatur}</p>
-      <p>Bibliographie: {work.Bibliographie}</p>
+      <p> <span class="font-semibold text-gray-500"> Werkgruppe:</span> <a class="text-blue-800" href={`/${slug}`}> {work.Werkgruppe}</a></p>
+      <p> <span class="font-semibold text-gray-500">Jahr:</span> {work.Jahr}</p>
+      <p><span class="font-semibold text-gray-500">Maße: </span>{work.Maße}</p>
+      <p><span class="font-semibold text-gray-500">Anzahl: </span>{work.Anzahl}</p>
+      <p><span class="font-semibold text-gray-500">Signatur:</span> {work.Signatur}</p>
+      <p><span class="font-semibold text-gray-500">Zustand: </span>{work.Zustand}</p>
+      <p><span class="font-semibold text-gray-500">Beschreibung:</span>{work.Beschreibung}</p>
+      <p><span class="font-semibold text-gray-500">Material:</span> {work.Material}</p>
+      <p><span class="font-semibold text-gray-500">Standort:</span> {work.Standort}</p>
+      <p><span class="font-semibold text-gray-500">Technik: </span>{work.Technik}</p>
+      <p><span class="font-semibold text-gray-500">Auflage:</span> {work.Auflage}</p>
+      <p><span class="font-semibold text-gray-500">Foto:</span> {work.Foto}</p>
+      <p><span class="font-semibold text-gray-500">Ausstellung:</span> {work.Ausstellung}</p>
+      <p><span class="font-semibold text-gray-500">Literatur:</span> {work.Literatur}</p>
+      <p><span class="font-semibold text-gray-500">Bibliographie:</span> {work.Bibliographie}</p>
     </div>
     <div class="w-full lg:w-1/2">
       <ImageViewer client:load imgs={imgs} title={work.Titel} />
