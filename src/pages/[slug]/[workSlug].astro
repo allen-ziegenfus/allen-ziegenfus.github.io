@@ -1,6 +1,7 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import ImageViewer from "../../components/ImageViewer.jsx";
+import { Eigenschaft, EigenschaftWithLink } from "../../components/Eigenschaft";
 import werkgruppen from "../../../public/werkgruppen.json";
 import SearchNavigation from "../../components/SearchNavigation";
 
@@ -45,38 +46,44 @@ const imgs = await Promise.all(
 ---
 
 <Layout title={work.Titel}>
-  
   <SearchNavigation client:only />
   <nav>
     <ul class="flex flex-row">
       <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
-      <li><a class="text-blue-800" href={`/${slug}`}> {titel}</a>&nbsp; / &nbsp;</li>
-      <li><a class="text-blue-800" href={`/${slug}/${workSlug}`}>{work.InvNr}</a></li>
+      <li>
+        <a class="text-blue-800" href={`/${slug}`}> {titel}</a>&nbsp; / &nbsp;
+      </li>
+      <li>
+        <a class="text-blue-800" href={`/${slug}/${workSlug}`}>{work.InvNr}</a>
+      </li>
     </ul>
   </nav>
-  
+
   <h2 class="text-2xl py-3">{work.Titel}</h2>
   <main class="flex flex-col-reverse lg:flex-row">
     <div class="eigenschaften w-full lg:w-1/2">
       <h2 class="py-3 text-xl">Inv. Nr.: {work.InvNr}</h2>
       <h3 class="py-3 text-xl">Eigenschaften</h3>
-      <p> <span class="font-semibold text-gray-500"> Werkgruppe:</span> <a class="text-blue-800" href={`/${slug}`}> {work.Werkgruppe}</a></p>
-      <p> <span class="font-semibold text-gray-500">Jahr:</span> {work.Jahr}</p>
-      <p><span class="font-semibold text-gray-500">Maße: </span>{work.Maße}</p>
-      <p><span class="font-semibold text-gray-500">Anzahl: </span>{work.Anzahl}</p>
-      <p><span class="font-semibold text-gray-500">Signatur:</span> {work.Signatur}</p>
-      <p><span class="font-semibold text-gray-500">Zustand: </span>{work.Zustand}</p>
-      <p><span class="font-semibold text-gray-500">Beschreibung:</span>{work.Beschreibung}</p>
-      <p><span class="font-semibold text-gray-500">Material:</span> {work.Material}</p>
-      <p><span class="font-semibold text-gray-500">Standort:</span> {work.Standort}</p>
-      <p><span class="font-semibold text-gray-500">Technik: </span>{work.Technik}</p>
-      <p><span class="font-semibold text-gray-500">Auflage:</span> {work.Auflage}</p>
-      <p><span class="font-semibold text-gray-500">Foto:</span> {work.Foto}</p>
-      <p><span class="font-semibold text-gray-500">Ausstellung:</span> {work.Ausstellung}</p>
-      <p><span class="font-semibold text-gray-500">Literatur:</span> {work.Literatur}</p>
-      <p><span class="font-semibold text-gray-500">Bibliographie:</span> {work.Bibliographie}</p>
+      <EigenschaftWithLink
+        title="Werkgruppe"
+        href={`/${slug}`}
+        value={work.Werkgruppe}
+      />
+      <Eigenschaft title="Jahr" value={work.Jahr} />
+      <Eigenschaft title="Maße" value={work.Maße} />
+      <Eigenschaft title="Anzahl" value={work.Anzahl} />
+      <Eigenschaft title="Signatur" value={work.Signatur} />
+      <Eigenschaft title="Zustand" value={work.Zustand} />
+      <Eigenschaft title="Beschreibung" value={work.Beschreibung} />
+      <Eigenschaft title="Standort" value={work.Standort} />
+      <Eigenschaft title="Technik" value={work.Technik} />
+      <Eigenschaft title="Auflage" value={work.Auflage} />
+      <Eigenschaft title="Foto" value={work.Foto} />
+      <Eigenschaft title="Ausstellung" value={work.Ausstellung} />
+      <Eigenschaft title="Literatur" value={work.Literatur} />
+      <Eigenschaft title="Bibliographie" value={work.Bibliographie} />
     </div>
-    <div class="w-full lg:w-1/2">
+    <div class="ml-2 w-full lg:w-1/2">
       <ImageViewer client:load imgs={imgs} title={work.Titel} />
     </div>
   </main>
