@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "yarn airtable-assets && astro build",
+    "build": "yarn airtable-assets && yarn airtable-pages && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "airtable-assets": "ts-node --esm --project airtable-assets-tsconfig.json src/werkverzeichnis/werkgruppen.ts"
+    "airtable-assets": "ts-node --esm --project airtable-assets-tsconfig.json src/werkverzeichnis/werkgruppen.ts",
+    "airtable-pages": "ts-node --esm --project airtable-assets-tsconfig.json src/werkverzeichnis/pages.ts"
   },
   "dependencies": {
     "@astrojs/react": "^2.1.1",
