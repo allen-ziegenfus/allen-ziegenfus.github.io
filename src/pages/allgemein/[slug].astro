@@ -31,7 +31,7 @@ const { page } = Astro.props;
         )
       }
       {!page.isTable && (
-        page.Records.map((pagerecord) => <div class="my-2">{pagerecord?.Text}</div>)
+        page.Records.map((pagerecord) => <div class="my-2" set:html={pagerecord?.Text}></div>)
         )
       }
     </div>
