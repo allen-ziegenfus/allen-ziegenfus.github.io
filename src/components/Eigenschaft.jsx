@@ -5,7 +5,7 @@ export function Eigenschaft({ title, value }) {
     value &&
     value !== "-" && (
       <p className="py-1">
-        <span class="font-semibold text-gray-500">{title}: </span>
+        <span className="font-semibold text-gray-500">{title}: </span>
         {value}
       </p>
     )
@@ -17,9 +17,9 @@ export function EigenschaftWithLink({ title, value, href }) {
     value &&
     value !== "-" && (
       <p className="py-1">
-        <span class="font-semibold text-gray-500">{title}: </span>
+        <span className="font-semibold text-gray-500">{title}: </span>
 
-        <a class="text-blue-800" href={href}>
+        <a className="text-blue-800" href={href}>
           {" "}
           {value}
         </a>
