@@ -103,7 +103,7 @@ async function performGetWerkgruppen() {
             Literatur: record.fields.Literatur,
             Bibliographie: record.fields.Bibliographie,
             Bilder: bilder,
-            Thumbnail: bilder[0]
+            Thumbnail: bilder[0].endsWith(".webm") ? "/placeholder.png" : bilder[0]
           };
           records.push(work);
         }
@@ -176,31 +176,39 @@ async function downloadFile(url: string, filepath: string): Promise<void> {
 async function getAttachmentURL(attachment: any, slug: string, index: number) {
   let url = "/placeholder.png";
   const base_filename = `${slug}-${String(index).padStart(2, '0')}`;
+
+  const isVideo = attachment && attachment.type.startsWith("video");
+  let attachmentUrl = attachment.url;
   if (attachment?.thumbnails?.large?.url) {
-    const downloadpath = `./build/images/${attachment.filename}`;
-    const new_filename = `images/${base_filename}.webp`
+    attachmentUrl = attachment?.thumbnails?.large?.url;
+  }
+  if (attachmentUrl) {
+    const new_filename = isVideo ? `images/${base_filename}.webm` : `images/${base_filename}.webp`
+    const new_filepath = `./public/${new_filename}`;
+    const downloadpath = isVideo ?  new_filepath : `./build/images/${attachment.filename}`;
     try {
       let imageExists = await imageDownloaded(downloadpath);
       while (!imageExists) {
         try {
-          await downloadFile(attachment?.thumbnails?.large?.url, downloadpath)
+          await downloadFile(attachmentUrl, downloadpath)
         } catch (error) {
           console.log(`Axios download for ${downloadpath} failed - trying again: ${error}`)
         }
         imageExists = await imageDownloaded(downloadpath);
       }
 
-      const webppath = `./public/${new_filename}`;
-      imageExists = await imageDownloaded(webppath);
-      while (!imageExists) {
-        try {
-          console.log(`Converting ${downloadpath} to webp ${webppath}`);
-          await sharp(downloadpath).webp().toFile(webppath);
+      if (!isVideo) {
+        imageExists = await imageDownloaded(new_filepath);
+        while (!imageExists) {
+          try {
+            console.log(`Converting ${downloadpath} to webp ${new_filepath}`);
+            await sharp(downloadpath).webp().toFile(new_filepath);
+          }
+          catch (error) {
+            console.log(`Error converting ${attachmentUrl}  ${downloadpath} to ${new_filepath}: ${error}`)
+          }
+          imageExists = await imageDownloaded(downloadpath);
         }
-        catch (error) {
-          console.log(`Error converting ${attachment?.thumbnails?.large?.url}  ${downloadpath} to ${webppath}: ${error}`)
-        }
-        imageExists = await imageDownloaded(downloadpath);
       }
     }
     catch (error) {
