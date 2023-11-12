@@ -19,6 +19,14 @@ export default function SearchBar({}) {
   }, []);
 
   useEffect(() => {
+    if (open) {
+      document.body.classList.add("overflow-hidden");
+    } else {
+      document.body.classList.remove("overflow-hidden");
+    }
+  }, [open]);
+
+  useEffect(() => {
     function performSearch() {
       const searchResults = fuse.search(searchInput);
       if (searchResults) {
@@ -60,17 +68,10 @@ export default function SearchBar({}) {
   });
 
   if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="absolute py-5 right-0 top-0 ml-auto"
-      >
-        🔍
-      </button>
-    );
+    return <button onClick={() => setOpen(true)}>🔍</button>;
   } else {
     return (
-      <div className="fixed top-0 bottom-0 left-0 right-0 bg-black">
+      <div className="fixed top-0 bottom-0 left-0 right-0 bg-black overflow-scroll">
         <div className="max-w-6xl m-auto">
           <input
             className="flex my-5 mx-auto w-1/2 h-10 rounded-lg p-2"
@@ -92,7 +93,7 @@ export default function SearchBar({}) {
               <h2>Ergebnisse für {searchInput}</h2>
             </div>
           )}
-          <div className="container text-white  p-6 grid grid-cols-4 gap-4">
+          <div className="container text-white p-6 grid grid-cols-2 lg:grid-cols-4 gap-4 ">
             {displayRows.length > 1 &&
               displayRows.map((row) => (
                 <li className="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600">

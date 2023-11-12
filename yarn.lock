@@ -1217,6 +1217,11 @@ astro-imagetools@^0.8.1:
   optionalDependencies:
     imagetools-core "3.0.2"
 
+astro-navbar@^2.3.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/astro-navbar/-/astro-navbar-2.3.0.tgz#0005221428c03be40542780966903535c9df00ef"
+  integrity sha512-5xnSuEuFM27FyWguZNRWv210P8J4MHCabkj+oHd94x+96peL3QRXWKpupGyHoo4Vdz4aNYe1GolcoOJRoJb7cA==
+
 astro@^2.2.0:
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/astro/-/astro-2.2.1.tgz#548ba89ec695592a205e2c1b6e39aa8f78d6f1bc"
