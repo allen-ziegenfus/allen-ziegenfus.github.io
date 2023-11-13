@@ -11,20 +11,19 @@ export default function ImageViewer({ imgs, title }) {
   return (
     <div className="flex flex-row flex-wrap justify-center">
       {isVideo && <video src={mainSrc} controls alt={title} />}
-      {!isVideo && <img src={mainSrc} alt={title} />}
-      <div className="flex flex-wrap mx-auto align-center justify-center">
-        {imgs.length > 1 &&
-          imgs.map((img, index) => (
-            <img
-              className="cursor-pointer w-28 m-1"
-              onClick={() => {
-                setIndex(index);
-                setOpen(true);
-              }}
-              src={img.src}
-              alt={title}
-            />
-          ))}
+      {!isVideo && <img className="print:hidden" src={mainSrc} alt={title} />}
+      <div className="flex flex-wrap mx-auto align-center justify-center ">
+        {imgs.map((img, index) => (
+          <img
+            className="cursor-pointer w-28 m-1 print:w-full"
+            onClick={() => {
+              setIndex(index);
+              setOpen(true);
+            }}
+            src={img.src}
+            alt={title}
+          />
+        ))}
       </div>
       <Lightbox
         open={open}
