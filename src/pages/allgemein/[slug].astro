@@ -16,22 +16,30 @@ const { page } = Astro.props;
 ---
 
 <Layout title={page.Name}>
+  <style is:global>
+    .page-text p {
+      text-indent: 1.5em;
+    }
+    .page-text h3, .page-text p {
+      margin-bottom: 1em;
+    }
+  </style>
   <main class="my-4">
     <h2 class="text-2xl py-3">{page.Name}</h2> 
     <div>
       {
         page.isTable && (
-          <div class="grid grid-cols-4 gap-4">
+          <div class=" grid grid-cols-4 md:grid-cols-6 gap-2">
             {page.Records.map((pagerecord) => 
               <div>{pagerecord.Spalte1}</div>
-              <div class="col-span-3"> {pagerecord.Spalte2}</div>
+              <div class="col-span-3 md:col-span-5"> {pagerecord.Spalte2}</div>
             )
             }
           </div>
         )
       }
       {!page.isTable && (
-        page.Records.map((pagerecord) => <div class="my-2" set:html={pagerecord?.Text}></div>)
+        page.Records.map((pagerecord) => <div class="page-text my-2" set:html={pagerecord?.Text}></div>)
         )
       }
     </div>

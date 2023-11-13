@@ -30,30 +30,29 @@ const { title } = Astro.props;
     <title>{title}</title>
   </head>
   <body class="max-w-6xl m-auto p-6 relative">
-    <header class="lg:sticky bg-white top-0">
+    <header class="sticky bg-white top-0">
       <div class="flex justify-center text-center py-5 relative">
         <a class="flex-grow" href="/"
           ><h1 class="text-2xl">
             Werkverzeichnis von Vollrad Kutscher ab 1968
           </h1></a
         >
-        <div class="ml-auto w-7 h-7 flex">
+        <div class="ml-auto w-7 h-7 flex print:hidden">
           <SearchBar client:only />
         </div>
-        <!--div class="lg:hidden ml-5">
+        <div class="lg:hidden ml-5 print:hidden">
           <MenuIcon class="align-center w-7 h-7 text-gray-800" />
-        </div-->
+        </div>
       </div>
-
-      <nav>
+      <nav class="print:hidden">
         <Astronav closeOnClick>
-          <div class="lg:hidden">
+          <div class="hidden">
             <MenuItems class="justify-center">
               <Dropdown class="group group:relative bg-gray-200">
                 <button
                   class="text-lg w-full text-left my-2 py-4 px-2 flex items-center"
                 >
-                  <span>Seiten</span>
+                  <span>Einführung</span>
 
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -172,7 +171,7 @@ const { title } = Astro.props;
     <footer class="py-3">
       <nav>
         <ul
-          class="flex flex-row flex-wrap bg-gray-200 py-4 px-2 my-3 justify-center"
+          class="flex flex-row flex-wrap bg-gray-200 py-4 px-2 my-3 justify-center print:hidden"
         >
           {
             footerPages.map((page) => (
