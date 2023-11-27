@@ -11,7 +11,9 @@ export default function ImageViewer({ imgs, title }) {
   return (
     <div className="flex flex-row flex-wrap justify-center">
       {isVideo && <video src={mainSrc} controls alt={title} />}
-      {!isVideo && <img className="print:hidden" src={mainSrc} alt={title} />}
+      {!isVideo && (
+        <img className="w-full print:hidden" src={mainSrc} alt={title} />
+      )}
       <div className="flex flex-wrap mx-auto align-center justify-center ">
         {imgs.map((img, index) => (
           <img
@@ -30,6 +32,7 @@ export default function ImageViewer({ imgs, title }) {
         close={() => setOpen(false)}
         index={index}
         slides={imgs}
+        carousel={{ finite: imgs.length == 1 }}
       />
     </div>
   );
