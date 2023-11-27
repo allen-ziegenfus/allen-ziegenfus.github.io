@@ -14,10 +14,10 @@ export default function ImageViewer({ imgs, title }) {
       {!isVideo && (
         <img className="w-full print:hidden" src={mainSrc} alt={title} />
       )}
-      <div className="flex flex-wrap mx-auto align-center justify-center ">
+      <div className="basis-28 flex flex-wrap mx-auto align-center justify-center ">
         {imgs.map((img, index) => (
           <img
-            className="cursor-pointer w-28 m-1 print:w-full"
+            className="cursor-pointer m-1 print:w-full"
             onClick={() => {
               setIndex(index);
               setOpen(true);

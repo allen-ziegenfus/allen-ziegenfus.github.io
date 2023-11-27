@@ -47,8 +47,8 @@ const { title } = Astro.props;
 
       <nav class="print:hidden">
         <Astronav closeOnClick>
-          <MenuItems class="hidden justify-center lg:hidden">
-            <Dropdown class="group group:relative bg-gray-200">
+          <MenuItems class="hidden justify-center lg:hidden h-screen">
+            <Dropdown class="group group:relative bg-gray-200 ">
               <button
                 class="text-lg w-full text-left my-2 mb-0 py-4 px-2 flex items-center"
               >
@@ -122,7 +122,6 @@ const { title } = Astro.props;
                 }
               </DropdownItems>
             </Dropdown>
-            <div class="h-screen"></div>
           </MenuItems>
 
           <div class="hidden lg:block">
