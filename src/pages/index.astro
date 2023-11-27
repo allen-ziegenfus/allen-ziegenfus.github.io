@@ -2,11 +2,15 @@
 import Layout from "../layouts/Layout.astro";
 import Card from "../components/Card.astro";
 import werkgruppen from "../../public/werkgruppen.json";
-
 ---
 
 <Layout title="Werkverzeichnis von Vollrad Kutscher ab 1968">
   <main>
+    <nav class="print:hidden">
+      <ul class="m-2 flex flex-row">
+        <li><a class="text-blue-800" href="/">Startseite</a></li>
+      </ul>
+    </nav>
     <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
       {
         werkgruppen.map((werkgruppe) => (

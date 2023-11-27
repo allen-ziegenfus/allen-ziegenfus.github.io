@@ -25,6 +25,14 @@ const { page } = Astro.props;
     }
   </style>
   <main class="my-4">
+    <nav class="print:hidden">
+      <ul class="flex flex-row">
+        <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
+        <li>
+          <a class="text-blue-800" href={`/allgemein/${page.Slug}`}> {page.Name}</a>
+        </li>
+      </ul>
+    </nav>
     <h2 class="text-lg md:text-2xl py-3">{page.Name}</h2> 
     <div>
       {

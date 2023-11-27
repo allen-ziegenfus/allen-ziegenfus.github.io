@@ -12,12 +12,20 @@ export async function getStaticPaths() {
     props: { werkgruppe },
   }));
 }
-const { werkgruppe } = Astro.props;
+const { werkgruppe, slug } = Astro.props;
 
 ---
 
 <Layout title={werkgruppe.Titel}>
   <main>
+    <nav class="print:hidden">
+      <ul class="flex flex-row">
+        <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
+        <li>
+          <a class="text-blue-800" href={`/${werkgruppe.Slug}`}> {werkgruppe.Titel}</a>
+        </li>
+      </ul>
+    </nav>
     <h2 class="text-lg md:text-2xl py-3">{werkgruppe.Titel}</h2> 
     <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
       {
