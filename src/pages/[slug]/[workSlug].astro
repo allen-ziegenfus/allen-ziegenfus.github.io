@@ -18,7 +18,7 @@ export async function getStaticPaths() {
       });
     }
   }
-  const paths = works.map((work) => ({
+  const paths = works.map((work, index, arr) => ({
     params: {
       slug: work.slug,
       workSlug: work.workSlug,
@@ -29,12 +29,14 @@ export async function getStaticPaths() {
       slug: work.slug,
       workSlug: work.workSlug,
       titel: work.titel,
+      prevLink: (index > 0) ?`/${arr[index-1].slug}/${arr[index-1].workSlug}` : false,
+      nextLink: (index < (arr.length-1)) ? `/${arr[index+1].slug}/${arr[index+1].workSlug}` : false
     },
   }));
 
   return paths;
 }
-const { work, records, slug, workSlug, titel } = Astro.props;
+const { work, records, slug, workSlug, titel, nextLink, prevLink } = Astro.props;
 
 const imgs = await Promise.all(
   work?.Bilder?.map(async (bild) => {
@@ -84,6 +86,10 @@ const imgs = await Promise.all(
       <Eigenschaft title="Bibliographie" value={work.Bibliographie} />
     </div>
     <div class="ml-2 w-full lg:w-1/2">
+      <div class="m-2 flex flex-row text-4xl justify-around">
+      {prevLink && <a href={prevLink}>	&lt;</a> }
+      {nextLink && <a href={nextLink}>	&gt;</a> }
+    </div>
       <ImageViewer client:load imgs={imgs} title={work.Titel} />
     </div>
   </main>
