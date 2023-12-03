@@ -50,7 +50,7 @@ const imgs = await Promise.all(
 <Layout title={work.Titel}>
   <SearchNavigation client:only />
   <nav class="print:hidden">
-    <ul class="flex flex-row">
+    <ul class="flex flex-row flex-wrap">
       <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
       <li>
         <a class="text-blue-800" href={`/${slug}`}> {titel}</a>&nbsp; / &nbsp;
