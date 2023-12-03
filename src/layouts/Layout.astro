@@ -48,7 +48,7 @@ const { title } = Astro.props;
       <nav class="print:hidden">
         <Astronav closeOnClick>
           <MenuItems class="hidden justify-center lg:hidden h-screen">
-            <Dropdown class="group group:relative bg-gray-200 ">
+            <Dropdown class="group group:relative bg-gray-200">
               <button
                 class="text-lg w-full text-left my-2 mb-0 py-4 px-2 flex items-center"
               >
@@ -125,10 +125,12 @@ const { title } = Astro.props;
           </MenuItems>
 
           <div class="hidden lg:block">
-            <MenuItems class="flex w-full bg-gray-200 relative mb-4 justify-center">
+            <MenuItems
+              class="flex w-full bg-gray-200 relative mb-4 justify-center"
+            >
               <Dropdown class="group group:relative bg-gray-200">
                 <button
-                  class="text-lg text-left my-2  py-4 px-5 flex items-center"
+                  class="text-lg text-left my-2 py-4 px-5 flex items-center"
                 >
                   <span>Einführung</span>
 
@@ -146,8 +148,13 @@ const { title } = Astro.props;
                       d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
                   </svg>
                 </button>
-                <div class="absolute h-screen left-0 right-0 bg-white bg-opacity-60 group-open:block hidden"></div>
-                <DropdownItems class="group:absolute absolute bg-gray-200 w-full  left-0">
+                <div
+                  class="absolute h-screen left-0 right-0 bg-white bg-opacity-60 group-open:block hidden"
+                >
+                </div>
+                <DropdownItems
+                  class="group:absolute absolute bg-gray-200 w-full left-0"
+                >
                   <div class="">
                     <ul>
                       {
@@ -187,20 +194,22 @@ const { title } = Astro.props;
                       d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
                   </svg>
                 </button>
-                <div class="absolute h-screen left-0 right-0 bg-white bg-opacity-60 group-open:block hidden"></div>
-                <DropdownItems class="group:absolute absolute bg-gray-200 w-full left-0 grid grid-cols-4">
+                <div
+                  class="absolute h-screen left-0 right-0 bg-white bg-opacity-60 group-open:block hidden"
+                >
+                </div>
+                <DropdownItems
+                  class="group:absolute absolute bg-gray-200 w-full left-0 grid grid-cols-4"
+                >
                   {
                     werkgruppen.map((werkgruppe) => (
-                    <a
-                          class="p-3 m-3 cursor-pointer border-2 rounded-lg border-gray-400 hover:border-gray-600 border-solid flex justify-center flex-wrap"
-                          href={`/${werkgruppe.Slug}`}
-                        >
-                  
-           
-                          <img src={werkgruppe.Thumbnail} class="h-[8vh]"/>
-                          <div class="text-center w-full">{werkgruppe.Titel}</div>
-                        
-                    </a>
+                      <a
+                        class="p-3 m-3 cursor-pointer border-2 rounded-lg border-gray-400 hover:border-gray-600 border-solid flex justify-center flex-wrap"
+                        href={`/${werkgruppe.Slug}`}
+                      >
+                        <img src={werkgruppe.Thumbnail} class="h-[8vh]" />
+                        <div class="text-center w-full">{werkgruppe.Titel}</div>
+                      </a>
                     ))
                   }
                 </DropdownItems>
