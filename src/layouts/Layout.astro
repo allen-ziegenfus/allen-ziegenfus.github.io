@@ -37,9 +37,6 @@ const { title } = Astro.props;
             Werkverzeichnis von Vollrad Kutscher ab 1968
           </h1></a
         >
-        <div class="ml-auto w-7 h-7 flex print:hidden">
-          <SearchBar client:only />
-        </div>
         <div class="lg:hidden ml-2 print:hidden">
           <MenuIcon class="align-center w-7 h-7 text-gray-800" />
         </div>
@@ -122,6 +119,35 @@ const { title } = Astro.props;
                 }
               </DropdownItems>
             </Dropdown>
+            <div class="m-3 flex justify-center">
+              <div class="m-3 w-7 h-7 flex print:hidden">
+                <SearchBar client:only />
+              </div>
+              <div style="" class="m-3 w-7 h-7">
+                <a href="javascript:window.print()">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 512 512"
+                  >
+                    <path
+                      fill="var(--ci-primary-color, currentColor)"
+                      d="M420,128.1V16H92V128.1A80.1,80.1,0,0,0,16,208V400H84V368H48V208a48.054,48.054,0,0,1,48-48H416a48.054,48.054,0,0,1,48,48V368H420v32h76V208A80.1,80.1,0,0,0,420,128.1Zm-32-.1H124V48H388Z"
+                      class="ci-primary"></path> 
+                    <rect
+                      width="32"
+                      height="32"
+                      x="396"
+                      y="200"
+                      fill="var(--ci-primary-color, currentColor)"
+                      class="ci-primary"></rect>
+                    <path
+                      fill="var(--ci-primary-color, currentColor)"
+                      d="M116,264H76v32h40V496H388V296h40V264H116ZM356,464H148V296H356Z"
+                      class="ci-primary"></path>
+                  </svg>
+                </a>
+              </div>
+            </div>
           </MenuItems>
 
           <div class="hidden lg:block">
@@ -214,6 +240,35 @@ const { title } = Astro.props;
                   }
                 </DropdownItems>
               </Dropdown>
+              <div class="m-3 flex absolute right-0">
+                <div class="m-3 w-7 h-7 flex print:hidden">
+                  <SearchBar client:only />
+                </div>
+                <div style="" class="m-3 w-7 h-7">
+                  <a href="javascript:window.print()">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 512 512"
+                    >
+                      <path
+                        fill="var(--ci-primary-color, currentColor)"
+                        d="M420,128.1V16H92V128.1A80.1,80.1,0,0,0,16,208V400H84V368H48V208a48.054,48.054,0,0,1,48-48H416a48.054,48.054,0,0,1,48,48V368H420v32h76V208A80.1,80.1,0,0,0,420,128.1Zm-32-.1H124V48H388Z"
+                        class="ci-primary"></path>
+                      <rect
+                        width="32"
+                        height="32"
+                        x="396"
+                        y="200"
+                        fill="var(--ci-primary-color, currentColor)"
+                        class="ci-primary"></rect>
+                      <path
+                        fill="var(--ci-primary-color, currentColor)"
+                        d="M116,264H76v32h40V496H388V296h40V264H116ZM356,464H148V296H356Z"
+                        class="ci-primary"></path>
+                    </svg>
+                  </a>
+                </div>
+              </div>
             </MenuItems>
           </div>
         </Astronav>
