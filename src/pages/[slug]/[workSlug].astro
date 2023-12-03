@@ -87,8 +87,8 @@ const imgs = await Promise.all(
     </div>
     <div class="ml-2 w-full lg:w-1/2">
       <div class="m-2 flex flex-row text-4xl justify-around">
-      {prevLink && <a href={prevLink}>	&lt;</a> }
-      {nextLink && <a href={nextLink}>	&gt;</a> }
+      {prevLink && <a class="text-gray-500" href={prevLink}>	&lt;</a> }
+      {nextLink && <a class="text-gray-500" href={nextLink}>	&gt;</a> }
     </div>
       <ImageViewer client:load imgs={imgs} title={work.Titel} />
     </div>
