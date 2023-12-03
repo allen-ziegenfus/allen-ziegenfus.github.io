@@ -36,7 +36,7 @@ export type Work = {
 }
 
 export type Workgroup = {
-  Titel: string; Slug: string; Thumbnail: any; Count: number; Records: Work[]; Reihenfolge: number;
+  Titel: string; Slug: string; Thumbnail: any; Count: number; Records: Work[]; Reihenfolge: number; Kurztitel: string;
 }
 let werkgruppen: Workgroup[] = [];
 
@@ -117,7 +117,8 @@ async function performGetWerkgruppen() {
           Thumbnail: await getAttachmentURL(overviewRecord.fields.Bild.slice(0, 1)[0], overviewRecord.fields.Slug, 1),
           Count: werkGruppenRecords.length,
           Records: records,
-          Reihenfolge: overviewRecord.fields.Reihenfolge
+          Reihenfolge: overviewRecord.fields.Reihenfolge,
+          Kurztitel: overviewRecord.fields.Kurztitel
         })
       } catch (error) {
         console.log("error fetching records", error)
