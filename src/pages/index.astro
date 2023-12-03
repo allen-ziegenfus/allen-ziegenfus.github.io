@@ -2,9 +2,10 @@
 import Layout from "../layouts/Layout.astro";
 import Card from "../components/Card.astro";
 import werkgruppen from "../../public/werkgruppen.json";
+import {WEBSITE_TITLE} from "../constants";
 ---
 
-<Layout title="Werkverzeichnis von Vollrad Kutscher ab 1968">
+<Layout title={WEBSITE_TITLE}>
   <main>
     <nav class="print:hidden">
       <ul class="m-2 flex flex-row">

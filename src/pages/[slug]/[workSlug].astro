@@ -4,6 +4,7 @@ import ImageViewer from "../../components/ImageViewer.jsx";
 import { Eigenschaft, EigenschaftWithLink } from "../../components/Eigenschaft";
 import werkgruppen from "../../../public/werkgruppen.json";
 import SearchNavigation from "../../components/SearchNavigation";
+import { WEBSITE_TITLE } from "../../constants";
 
 export async function getStaticPaths() {
   const works = [];
@@ -47,7 +48,7 @@ const imgs = await Promise.all(
 );
 ---
 
-<Layout title={work.Titel}>
+<Layout title={work.Titel + ' - ' + WEBSITE_TITLE}>
   <SearchNavigation client:only />
   <nav class="print:hidden">
     <ul class="flex flex-row flex-wrap">

@@ -1,0 +1,1 @@
+export const WEBSITE_TITLE = "Werkverzeichnis von Vollrad Kutscher ab 1968";
