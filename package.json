@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "yarn airtable-assets && yarn airtable-pages && astro build",
+    "build": "node --version && yarn airtable-assets && yarn airtable-pages && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "airtable-assets": "ts-node --esm --project airtable-assets-tsconfig.json src/werkverzeichnis/werkgruppen.ts",
