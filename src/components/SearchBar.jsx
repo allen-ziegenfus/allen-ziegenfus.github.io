@@ -73,7 +73,6 @@ export default function SearchBar({}) {
 
   useEffect(() => {
     const [minYear, maxYear] = selectedYearRange;
-    console.log("checking", selectedWerkgruppe);
     const filteredRecords = records.filter(
       (record) =>
         Number(record.Jahr) >= minYear &&
@@ -92,6 +91,8 @@ export default function SearchBar({}) {
         recordsToShow = searchResults.map((result) => result.item);
       }
     }
+
+    recordsToShow.sort((a, b) => Number(a.Jahr) > Number(b.Jahr));
 
     setDisplayRows(
       recordsToShow.slice(0, 24).map((record) => ({
@@ -219,7 +220,12 @@ export default function SearchBar({}) {
                       href={`${row.Slug}/?search=${searchInput}`}
                     >
                       <img src={row.Thumbnail} alt={row.Titel} />
-                      <h2 className="pt-2 break-words md:break-normal" style={{"hyphens": "auto"}}>{row.Titel}</h2>
+                      <h2
+                        className="pt-2 break-words md:break-normal"
+                        style={{ hyphens: "auto" }}
+                      >
+                        {row.Titel}
+                      </h2>
                       <h3 className="pt-2">{row.InvNr}</h3>
                     </a>
                   </li>
