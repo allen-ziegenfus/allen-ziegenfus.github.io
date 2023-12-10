@@ -16,7 +16,7 @@ export default function SearchBar({}) {
   const [selectedYearRange, setSelectedYearRange] = useState([0, 0]);
   const [fetched, setFetched] = useState(false);
   const [bildVorhanden, setBildVorhanden] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [werkgruppen, setWerkgruppen] = useState([]);
   const [selectedWerkgruppe, setSelectedWerkgruppe] = useState();
 
@@ -219,7 +219,7 @@ export default function SearchBar({}) {
                       href={`${row.Slug}/?search=${searchInput}`}
                     >
                       <img src={row.Thumbnail} alt={row.Titel} />
-                      <h2 className="pt-2">{row.Titel}</h2>
+                      <h2 className="pt-2 break-words md:break-normal" style={{"hyphens": "auto"}}>{row.Titel}</h2>
                       <h3 className="pt-2">{row.InvNr}</h3>
                     </a>
                   </li>
