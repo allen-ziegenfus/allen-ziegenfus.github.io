@@ -30,14 +30,21 @@ export async function getStaticPaths() {
       slug: work.slug,
       workSlug: work.workSlug,
       titel: work.titel,
-      prevLink: (index > 0) ?`/${arr[index-1].slug}/${arr[index-1].workSlug}` : false,
-      nextLink: (index < (arr.length-1)) ? `/${arr[index+1].slug}/${arr[index+1].workSlug}` : false
+      prevLink:
+        index > 0
+          ? `/${arr[index - 1].slug}/${arr[index - 1].workSlug}`
+          : false,
+      nextLink:
+        index < arr.length - 1
+          ? `/${arr[index + 1].slug}/${arr[index + 1].workSlug}`
+          : false,
     },
   }));
 
   return paths;
 }
-const { work, records, slug, workSlug, titel, nextLink, prevLink } = Astro.props;
+const { work, records, slug, workSlug, titel, nextLink, prevLink } =
+  Astro.props;
 
 const imgs = await Promise.all(
   work?.Bilder?.map(async (bild) => {
@@ -48,7 +55,7 @@ const imgs = await Promise.all(
 );
 ---
 
-<Layout title={work.Titel + ' - ' + WEBSITE_TITLE}>
+<Layout title={work.Titel + " - " + WEBSITE_TITLE}>
   <SearchNavigation client:only />
   <nav class="print:hidden">
     <ul class="flex flex-row flex-wrap">
@@ -62,9 +69,10 @@ const imgs = await Promise.all(
     </ul>
   </nav>
 
-  <h2 class="text-lg md:text-2xl py-3">{work.Titel}</h2>
+  <h2 class="md:hidden text-lg md:text-2xl py-3">{work.Titel}</h2>
   <main class="flex flex-col-reverse lg:flex-row print:flex-row">
     <div class="eigenschaften w-full lg:w-1/2">
+      <h2 class="hidden md:block text-lg md:text-2xl py-3">{work.Titel}</h2>
       <h2 class="py-3 text-xl">Inv. Nr.: {work.InvNr}</h2>
       <h3 class="py-3 text-xl">Eigenschaften</h3>
       <EigenschaftWithLink
@@ -88,9 +96,23 @@ const imgs = await Promise.all(
     </div>
     <div class="ml-2 w-full lg:w-1/2">
       <div class="m-2 flex flex-row text-4xl justify-around">
-      {prevLink && <a class="print:hidden text-gray-500" href={prevLink}>	&lt;</a> }
-      {nextLink && <a class="print:hidden text-gray-500" href={nextLink}>	&gt;</a> }
-    </div>
+        {
+          prevLink && (
+            <a class="print:hidden text-gray-500" href={prevLink}>
+              {" "}
+              &lt;
+            </a>
+          )
+        }
+        {
+          nextLink && (
+            <a class="print:hidden text-gray-500" href={nextLink}>
+              {" "}
+              &gt;
+            </a>
+          )
+        }
+      </div>
       <ImageViewer client:load imgs={imgs} title={work.Titel} />
     </div>
   </main>

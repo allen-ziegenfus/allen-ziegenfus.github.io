@@ -17,7 +17,7 @@ export default function SearchBar({}) {
   const [selectedYearRange, setSelectedYearRange] = useState([0, 0]);
   const [fetched, setFetched] = useState(false);
   const [bildVorhanden, setBildVorhanden] = useState(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [werkgruppen, setWerkgruppen] = useState([]);
   const [selectedWerkgruppe, setSelectedWerkgruppe] = useState();
   const [invNrs, setInvNrs] = useState([]);
