@@ -8,18 +8,18 @@ import { marked } from 'marked';
 dotenv.config()
 
 async function getPages() {
-  const pages = [];
+  const pages: any[] = [];
   const pageRecords = await listPageRecords();
   for (const pageRecord of pageRecords) {
 
     try {
-      const individualPageRecords = await listRecords(process.env.BASE_ID, pageRecord.fields.Table);
+      const individualPageRecords = await listRecords(process.env.BASE_ID!, pageRecord.fields.Table);
       const reihenfolge = pageRecord.fields.Reihenfolge;
-      const page = {};
+      const page: any = {};
       const processedPageRecords = []
       let isTable = false;
       for (const individualPageRecord of individualPageRecords) {
-        const processedPageRecord = {};
+        const processedPageRecord: any = {};
         for (const field in individualPageRecord.fields) {
           if (field === 'Text') {
             processedPageRecord[field] = marked.parse(individualPageRecord.fields[field]);
@@ -29,11 +29,11 @@ async function getPages() {
           if (field === 'Spalte1') { isTable = true }
         }
         if (processedPageRecord["Reihenfolge"]) {
-        processedPageRecords.push(processedPageRecord);
+          processedPageRecords.push(processedPageRecord);
         }
 
       }
-      
+
       page["Name"] = pageRecord.fields.Table;
       page["Records"] = processedPageRecords.sort((a, b) => a?.Reihenfolge ? a?.Reihenfolge - b?.Reihenfolge : 0);;
       page["Slug"] = `${slugify(pageRecord.fields.Table, { lower: true })}`;
