@@ -1,9 +1,9 @@
 ﻿export async function listOverviewRecords() {
-    return listRecords(process.env.BASE_ID, process.env.TABLE_NAME);
+    return listRecords(process.env.BASE_ID!, process.env.TABLE_NAME!);
 }
 
 export async function listPageRecords() {
-    return listRecords(process.env.BASE_ID, "Seiten");
+    return listRecords(process.env.BASE_ID!, "Seiten");
 }
 
 export async function listRecords(baseId: string, tableName: string) : Promise< {id: string, fields: { [key: string]: any}}[]>{  
