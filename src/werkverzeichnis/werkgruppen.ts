@@ -35,6 +35,16 @@ export type Work = {
   Bibliographie: string
 }
 
+export type SearchMetadata = {
+  MinYear: number,
+  MaxYear: number,
+  Werkgruppen: {
+    WerkgruppenTitel: string
+    WerkgruppenSlug: string
+  }[],
+  InvNrs: string[]
+}
+
 export type Workgroup = {
   Titel: string; Slug: string; Thumbnail: any; Count: number; Records: Work[]; Reihenfolge: number; Kurztitel: string;
 }
@@ -66,7 +76,12 @@ async function performGetWerkgruppen() {
 
   try {
     let werkgruppenTemp: Workgroup[] = [];
-
+    let searchMetadata: SearchMetadata = {
+      MinYear: Number.MAX_VALUE,
+      MaxYear: Number.MIN_VALUE,
+      Werkgruppen: [],
+      InvNrs: []
+    };
     const overviewRecords = await listOverviewRecords();
     for (const overviewRecord of overviewRecords) {
       try {
@@ -105,6 +120,17 @@ async function performGetWerkgruppen() {
             Bilder: bilder,
             Thumbnail: bilder[0].endsWith(".webm") ? "/placeholder.png" : bilder[0]
           };
+
+          const year = Number(record.fields.Jahr);
+          if (year) {
+            if (year < searchMetadata.MinYear) {
+              searchMetadata.MinYear = record.fields.Jahr;
+            }
+            if (year > searchMetadata.MaxYear) {
+              searchMetadata.MaxYear = record.fields.Jahr;
+            }
+          }
+          searchMetadata.InvNrs.push(record.fields["Inv. Nr."]);
           records.push(work);
         }
 
@@ -120,6 +146,7 @@ async function performGetWerkgruppen() {
           Reihenfolge: overviewRecord.fields.Reihenfolge,
           Kurztitel: overviewRecord.fields.Kurztitel
         })
+        searchMetadata.Werkgruppen.push({ WerkgruppenSlug: overviewRecord.fields.Slug, WerkgruppenTitel: overviewRecord.fields.Titel });
       } catch (error) {
         console.log("error fetching records", error)
       }
@@ -133,6 +160,7 @@ async function performGetWerkgruppen() {
     werkgruppen.forEach(
       (workgroup) => (records = records.concat(workgroup.Records))
     );
+    await fs.promises.writeFile("./public/searchMetadata.json", JSON.stringify(searchMetadata));
     await fs.promises.writeFile("./public/records.json", JSON.stringify(records));
     await fs.promises.writeFile("./public/werkgruppen.json", JSON.stringify(werkgruppen));
 
@@ -186,7 +214,7 @@ async function getAttachmentURL(attachment: any, slug: string, index: number) {
   if (attachmentUrl) {
     const new_filename = isVideo ? `images/${base_filename}.webm` : `images/${base_filename}.webp`
     const new_filepath = `./public/${new_filename}`;
-    const downloadpath = isVideo ?  new_filepath : `./build/images/${attachment.filename}`;
+    const downloadpath = isVideo ? new_filepath : `./build/images/${attachment.filename}`;
     try {
       let imageExists = await imageDownloaded(downloadpath);
       while (!imageExists) {

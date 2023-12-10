@@ -11,7 +11,7 @@ export default function ImageViewer({ imgs, title }) {
   return (
     <div className="flex flex-row flex-wrap justify-center">
       {isVideo && <video src={mainSrc} controls alt={title} />}
-      {!isVideo && <img class="w-full" src={mainSrc} alt={title}/>}
+      {!isVideo && <img className="w-full" src={mainSrc} alt={title}/>}
       <div className="flex flex-wrap mx-auto align-center justify-center">
         {imgs.length > 1 &&
           imgs.map((img, index) => (
