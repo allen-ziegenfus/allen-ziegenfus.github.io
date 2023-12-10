@@ -8,6 +8,7 @@ import Select from "react-select";
 export default function SearchBar({}) {
   const urlParams = new URLSearchParams(window.location.search);
   const search = urlParams.get("search");
+  const DELTA = 24;
 
   const [searchInput, setSearchInput] = useState(search || "");
   const [displayRows, setDisplayRows] = useState([]);
@@ -19,6 +20,7 @@ export default function SearchBar({}) {
   const [open, setOpen] = useState(true);
   const [werkgruppen, setWerkgruppen] = useState([]);
   const [selectedWerkgruppe, setSelectedWerkgruppe] = useState();
+  const [page, setPage] = useState(0);
 
   function openSearch(e) {
     setOpen(true);
@@ -94,8 +96,9 @@ export default function SearchBar({}) {
 
     recordsToShow.sort((a, b) => Number(a.Jahr) > Number(b.Jahr));
 
+    setPage(0);
     setDisplayRows(
-      recordsToShow.slice(0, 24).map((record) => ({
+      recordsToShow.map((record) => ({
         Titel: record.Titel,
         Slug: `/${record.WerkgruppeSlug}/${record.Slug}`,
         Thumbnail: record.Thumbnail,
@@ -159,10 +162,10 @@ export default function SearchBar({}) {
               }}
             ></input>
 
-            <div class="p-6">
-              <div class="w-full flex-wrap md:flex border-2  rounded-md p-2 items-center gap-4">
+            <div className="p-6">
+              <div className="w-full flex-wrap md:flex border-2  rounded-md p-2 items-center gap-4">
                 <div className="p-1 flex-1">
-                  <div class="mb-2 text-center">Jahr</div>
+                  <div className="mb-2 text-center">Jahr</div>
                   <style>
                     {`
                     .rt-SliderTrack {
@@ -214,28 +217,58 @@ export default function SearchBar({}) {
                 <h2>Ergebnisse für {searchInput}</h2>
               </div>
             )}
+            <div className="p-6 ]ext-center flex items-center justify-evenly gap-2">
+              <a
+                className="cursor-pointer text-2xl"
+                onClick={() => {
+                  if (page > 0) {
+                    setPage(page - 1);
+                  }
+                }}
+              >
+                &lt;
+              </a>
+              <div class="text-center">
+              
+              {page * DELTA + 1} -{" "}
+              {Math.min(page * DELTA + DELTA, displayRows.length)} von{" "}
+              {displayRows.length} werden angezeigt
+              </div>
+              <a
+                className="cursor-pointer text-2xl"
+                onClick={() => {
+                  if (page +1 < Math.ceil(displayRows.length / DELTA)) {
+                    setPage(page + 1);
+                  }
+                }}
+              >
+                &gt;
+              </a>
+            </div>
             <div className="container text-white p-6 grid grid-cols-2 lg:grid-cols-4 gap-4 ">
               {displayRows.length > 1 &&
-                displayRows.map((row) => (
-                  <li
-                    key={row.InvNr}
-                    className="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600"
-                  >
-                    <a
-                      className="flex flex-col"
-                      href={`${row.Slug}/?search=${searchInput}`}
+                displayRows
+                  .slice(page * DELTA, page * DELTA + DELTA)
+                  .map((row) => (
+                    <li
+                      key={row.InvNr}
+                      className="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600"
                     >
-                      <img src={row.Thumbnail} alt={row.Titel} />
-                      <h2
-                        className="pt-2 break-words md:break-normal"
-                        style={{ hyphens: "auto" }}
+                      <a
+                        className="flex flex-col"
+                        href={`${row.Slug}/?search=${searchInput}`}
                       >
-                        {row.Titel}
-                      </h2>
-                      <h3 className="pt-2">{row.InvNr}</h3>
-                    </a>
-                  </li>
-                ))}
+                        <img src={row.Thumbnail} alt={row.Titel} />
+                        <h2
+                          className="pt-2 break-words md:break-normal"
+                          style={{ hyphens: "auto" }}
+                        >
+                          {row.Titel}
+                        </h2>
+                        <h3 className="pt-2">{row.InvNr}</h3>
+                      </a>
+                    </li>
+                  ))}
             </div>
           </div>
           <button
