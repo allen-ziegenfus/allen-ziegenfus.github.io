@@ -20,6 +20,7 @@ export default function SearchBar({}) {
   const [open, setOpen] = useState(true);
   const [werkgruppen, setWerkgruppen] = useState([]);
   const [selectedWerkgruppe, setSelectedWerkgruppe] = useState();
+  const [invNrs, setInvNrs] = useState([]);
   const [page, setPage] = useState(0);
 
   function openSearch(e) {
@@ -66,6 +67,7 @@ export default function SearchBar({}) {
         setWerkgruppen(options);
         setSelectedWerkgruppe(all);
         setFetched(true);
+        setInvNrs(searchMetadata.InvNrs);
       } catch (error) {
         console.log(error);
       }
@@ -85,6 +87,7 @@ export default function SearchBar({}) {
     );
 
     let recordsToShow = filteredRecords;
+    recordsToShow.sort((a, b) => Number(a.Jahr) > Number(b.Jahr));
     if (searchInput) {
       fuse.setCollection(filteredRecords);
 
@@ -93,8 +96,6 @@ export default function SearchBar({}) {
         recordsToShow = searchResults.map((result) => result.item);
       }
     }
-
-    recordsToShow.sort((a, b) => Number(a.Jahr) > Number(b.Jahr));
 
     setPage(0);
     setDisplayRows(
@@ -117,9 +118,9 @@ export default function SearchBar({}) {
     threshold: 0.5,
     minMatchCharLength: 2,
     keys: [
-      { name: "Titel", weight: 10 },
+      { name: "Titel", weight: 50 },
       { name: "Auflage", weight: 1 },
-      { name: "InvNr", weight: 10 },
+      { name: "InvNr", weight: 100 },
       { name: "Jahr", weight: 5 },
       { name: "Beschreibung", weight: 8 },
       { name: "Material", weight: 4 },
@@ -155,12 +156,20 @@ export default function SearchBar({}) {
             <input
               className="text-black flex my-5 mx-auto w-1/2 h-10 rounded-lg p-2"
               placeholder="Suchen"
+              list="inv-nrs"
               value={searchInput}
               onChange={(e) => {
                 const searchTerm = e.target.value;
                 setSearchInput(searchTerm);
               }}
             ></input>
+            {fetched && invNrs.length > 0 && (
+              <datalist id="inv-nrs">
+                {invNrs.map((invNr) => (
+                  <option key={invNr} value={invNr}></option>
+                ))}
+              </datalist>
+            )}
 
             <div className="p-6">
               <div className="w-full flex-wrap md:flex border-2  rounded-md p-2 items-center gap-4">
@@ -229,15 +238,14 @@ export default function SearchBar({}) {
                 &lt;
               </a>
               <div class="text-center">
-              
-              {page * DELTA + 1} -{" "}
-              {Math.min(page * DELTA + DELTA, displayRows.length)} von{" "}
-              {displayRows.length} werden angezeigt
+                {Math.min(page * DELTA + 1, displayRows.length)} -{" "}
+                {Math.min(page * DELTA + DELTA, displayRows.length)} von{" "}
+                {displayRows.length} werden angezeigt
               </div>
               <a
                 className="cursor-pointer text-2xl"
                 onClick={() => {
-                  if (page +1 < Math.ceil(displayRows.length / DELTA)) {
+                  if (page + 1 < Math.ceil(displayRows.length / DELTA)) {
                     setPage(page + 1);
                   }
                 }}
