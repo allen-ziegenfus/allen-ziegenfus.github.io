@@ -159,8 +159,8 @@ export default function SearchBar({}) {
             ></input>
 
             <div class="p-6">
-              <div class="w-full flex-wrap md:flex border-2  rounded-md p-4 align-center">
-                <div className="basis-1/2 p-2">
+              <div class="w-full flex-wrap md:flex border-2  rounded-md p-2 items-center gap-4">
+                <div className="p-1 flex-1">
                   <div class="mb-2 text-center">Jahr</div>
                   <Theme>
                     <Slider
@@ -177,7 +177,7 @@ export default function SearchBar({}) {
                   </div>
                 </div>
 
-                <div className="p-3  text-black flex flex-wrap items-center w-1/2">
+                <div className="p-1  text-black flex flex-wrap items-center flex-1">
                   <div className="my-1 w-full flex items-center ">
                     <div className="text-white">Werkgruppe:</div>
                     {werkgruppen.length > 0 && (
