@@ -163,6 +163,12 @@ export default function SearchBar({}) {
               <div class="w-full flex-wrap md:flex border-2  rounded-md p-2 items-center gap-4">
                 <div className="p-1 flex-1">
                   <div class="mb-2 text-center">Jahr</div>
+                  <style>
+                    {`
+                    .rt-SliderTrack {
+                        background-color: white;
+                    } `}
+                  </style>
                   <Theme>
                     <Slider
                       defaultValue={selectedYearRange}
