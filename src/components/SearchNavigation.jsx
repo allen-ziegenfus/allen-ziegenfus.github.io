@@ -10,10 +10,10 @@ export default function SearchNavigation({}) {
 
   const search = urlParams.get("search");
   return (
-    search && (
+    (search !== null) && (
       <div class="my-3">
         <a class="cursor-pointer" onClick={setSearchState}>
-          ← Zurück zu Suchergebnissen für {search}
+          ← Zurück zu Suchergebnissen {search && (<>für {search}</>)}
         </a>
       </div>
     )
