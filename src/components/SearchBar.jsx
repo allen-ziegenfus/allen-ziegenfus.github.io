@@ -76,6 +76,27 @@ export default function SearchBar({}) {
   }, []);
 
   useEffect(() => {
+    try {
+      const sessionSelectedYearRange = JSON.parse(
+        sessionStorage.getItem("selectedYearRange")
+      );
+      if (sessionSelectedYearRange)
+        setSelectedYearRange(sessionSelectedYearRange);
+      const sessionSelectedWerkgruppe = JSON.parse(
+        sessionStorage.getItem("selectedWerkgruppe")
+      );
+      if (sessionSelectedWerkgruppe)
+        setSelectedWerkgruppe(sessionSelectedWerkgruppe);
+      const sessionBildVorhanden = sessionStorage.getItem("bildVorhanden");
+      if (sessionBildVorhanden) {
+        setBildVorhanden(sessionBildVorhanden === 'true');
+      }
+    } catch (error) {
+      sessionStorage.clear();
+    }
+  }, [fetched, open]);
+  useEffect(() => {
+    if (!fetched) return;
     const [minYear, maxYear] = selectedYearRange;
     const filteredRecords = records.filter(
       (record) =>
@@ -112,6 +133,7 @@ export default function SearchBar({}) {
     bildVorhanden,
     searchInput,
     selectedWerkgruppe,
+    fetched,
   ]);
 
   const fuse = new Fuse(records, {
@@ -188,6 +210,10 @@ export default function SearchBar({}) {
                       max={Number(yearRange[1])}
                       onValueChange={(newYearRange) => {
                         setSelectedYearRange(newYearRange);
+                        sessionStorage.setItem(
+                          "selectedYearRange",
+                          JSON.stringify(newYearRange)
+                        );
                       }}
                     ></Slider>
                   </Theme>
@@ -202,7 +228,13 @@ export default function SearchBar({}) {
                     {werkgruppen.length > 0 && (
                       <Select
                         className="m-1 w-full"
-                        onChange={(option) => setSelectedWerkgruppe(option)}
+                        onChange={(option) => {
+                          setSelectedWerkgruppe(option);
+                          sessionStorage.setItem(
+                            "selectedWerkgruppe",
+                            JSON.stringify(option)
+                          );
+                        }}
                         options={werkgruppen}
                         defaultValue={selectedWerkgruppe}
                       />
@@ -212,7 +244,14 @@ export default function SearchBar({}) {
                     <input
                       type="checkbox"
                       id="bildvorhanden"
-                      onChange={(val) => setBildVorhanden(val.target.checked)}
+                      checked={bildVorhanden}
+                      onChange={(val) => {
+                        setBildVorhanden(val.target.checked);
+                        sessionStorage.setItem(
+                          "bildVorhanden",
+                          val.target.checked
+                        );
+                      }}
                     />
                     <label className="ml-2" htmlFor="bildvorhanden">
                       Bild vorhanden?
