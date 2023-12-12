@@ -1,7 +1,7 @@
 import { React, useEffect, useState } from "react";
 
-function setSearchState(search) {
-  const event = new Event("openSearch");
+export function setSearchState() {
+  const event = new CustomEvent("openSearch");
   window.dispatchEvent(event);
 }
 
@@ -10,10 +10,10 @@ export default function SearchNavigation({}) {
 
   const search = urlParams.get("search");
   return (
-    (search !== null) && (
+    search !== null && (
       <div class="my-3">
         <a class="cursor-pointer" onClick={setSearchState}>
-          ← Zurück zu Suchergebnissen {search && (<>für {search}</>)}
+          ← Zurück zu Suchergebnissen {search && <>für {search}</>}
         </a>
       </div>
     )

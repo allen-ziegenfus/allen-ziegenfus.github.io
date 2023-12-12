@@ -1,5 +1,6 @@
 ---
 import SearchBar from "../components/SearchBar.jsx";
+import SearchIcon from "../components/SearchIcon.jsx";
 import werkgruppen from "../../public/werkgruppen.json";
 import pages from "../../public/pages.json";
 import {
@@ -30,8 +31,11 @@ const { title } = Astro.props;
     <title>{title}</title>
   </head>
   <body class="max-w-6xl m-auto p-4 md:p-6 relative">
+    <SearchBar client:only />
     <header class="sticky bg-white top-0 print:static">
-      <div class="flex justify-center text-center py-2 md:py-5 relative items-center">
+      <div
+        class="flex justify-center text-center py-2 md:py-5 relative items-center"
+      >
         <a class="flex-grow" href="/"
           ><h1 class="text-lg md:text-2xl lg:hidden print:hidden">
             Werkverzeichnis von <br />Vollrad Kutscher ab 1968
@@ -127,18 +131,15 @@ const { title } = Astro.props;
             </Dropdown>
             <div class="m-3 flex justify-center">
               <div class="m-3 w-7 h-7 flex print:hidden">
-                <SearchBar client:only />
+                <SearchIcon client:only />
               </div>
               <div style="" class="m-3 w-7 h-7">
                 <a href="javascript:window.print()">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 512 512"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                     <path
                       fill="var(--ci-primary-color, currentColor)"
                       d="M420,128.1V16H92V128.1A80.1,80.1,0,0,0,16,208V400H84V368H48V208a48.054,48.054,0,0,1,48-48H416a48.054,48.054,0,0,1,48,48V368H420v32h76V208A80.1,80.1,0,0,0,420,128.1Zm-32-.1H124V48H388Z"
-                      class="ci-primary"></path> 
+                      class="ci-primary"></path>
                     <rect
                       width="32"
                       height="32"
@@ -248,7 +249,7 @@ const { title } = Astro.props;
               </Dropdown>
               <div class="m-3 flex absolute right-0">
                 <div class="m-3 w-7 h-7 flex print:hidden">
-                  <SearchBar client:only />
+                  <SearchIcon client:only />
                 </div>
                 <div style="" class="m-3 w-7 h-7">
                   <a href="javascript:window.print()">
