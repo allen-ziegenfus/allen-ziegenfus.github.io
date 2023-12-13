@@ -164,20 +164,12 @@ export default function SearchBar({}) {
           <input
             className="text-black flex my-5 mx-auto w-1/2 h-10 rounded-lg p-2"
             placeholder="Suchen"
-            list="inv-nrs"
             value={searchInput}
             onChange={(e) => {
               const searchTerm = e.target.value;
               setSearchInput(searchTerm);
             }}
           ></input>
-          {fetched && invNrs.length > 0 && (
-            <datalist id="inv-nrs">
-              {invNrs.map((invNr) => (
-                <option key={invNr} value={invNr}></option>
-              ))}
-            </datalist>
-          )}
 
           <div className="p-6">
             <div className="w-full flex-wrap md:flex border-2  rounded-md p-2 items-center gap-4">
