@@ -1,5 +1,6 @@
 import { React, useEffect, useState } from "react";
-import Fuse from "fuse.js";
+import Document from "flexsearch/src/document";
+import { filter, stemmer } from "flexsearch/src/lang/de";
 import { Slider } from "@radix-ui/themes";
 import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
@@ -23,6 +24,32 @@ export default function SearchBar({}) {
   const [selectedWerkgruppe, setSelectedWerkgruppe] = useState();
   const [invNrs, setInvNrs] = useState([]);
   const [page, setPage] = useState(0);
+  const [index, setIndex] = useState();
+  const [indexedRecords, setIndexedRecords] = useState();
+
+  function createIndex(records) {
+    const index = new Document({
+      document: {
+        id: "InvNr",
+
+        index: [
+          { field: "InvNr", tokenize: "strict", minlength: 3 },
+          { field: "Titel", tokenize: "strict", minlength: 3 },
+          { field: "Beschreibung", tokenize: "strict", minlength: 3 },
+        ],
+      },
+      language: "de",
+      filter,
+      stemmer,
+    });
+
+    const map = {};
+    records.forEach((record) => {
+      index.add(record);
+      map[record.InvNr] = record;
+    });
+    return [index, map];
+  }
 
   function openSearch(e) {
     setOpen(true);
@@ -50,7 +77,8 @@ export default function SearchBar({}) {
     async function fetchRecords() {
       try {
         const recordsresponse = await fetch("/records.json");
-        setRecords(await recordsresponse.json());
+        const recordsresponsejson = await recordsresponse.json();
+        setRecords(recordsresponsejson);
         const searchMetadataResponse = await fetch("/searchMetadata.json");
         const searchMetadata = await searchMetadataResponse.json();
         setYearRange([
@@ -75,6 +103,10 @@ export default function SearchBar({}) {
         setSelectedWerkgruppe(all);
         setFetched(true);
         setInvNrs(searchMetadata.InvNrs);
+
+        const [index, map] = createIndex(recordsresponsejson);
+        setIndex(index);
+        setIndexedRecords(map);
       } catch (error) {
         console.log(error);
       }
@@ -116,12 +148,19 @@ export default function SearchBar({}) {
 
     let recordsToShow = filteredRecords;
     recordsToShow.sort((a, b) => Number(a.Jahr) > Number(b.Jahr));
-    if (searchInput) {
-      fuse.setCollection(filteredRecords);
+    if (searchInput && index) {
+      const [filteredIndex] = createIndex(filteredRecords);
+      const searchResults = filteredIndex.search(searchInput, { enrich: true });
 
-      const searchResults = fuse.search(searchInput);
+      const rank = { InvNr: 0, Titel: 1, Beschreibung: 2 };
+
       if (searchResults) {
-        recordsToShow = searchResults.map((result) => result.item);
+        searchResults.sort((a, b) => {
+          rank[a.field] - rank[b.field];
+        });
+        const rankedResults = [];
+        searchResults.forEach((result) => rankedResults.push(...result.result));
+        recordsToShow = rankedResults.map((InvNr) => indexedRecords[InvNr]);
       }
     }
 
@@ -143,18 +182,6 @@ export default function SearchBar({}) {
     fetched,
   ]);
 
-  const fuse = new Fuse(records, {
-    threshold: 0.5,
-    minMatchCharLength: 2,
-    keys: [
-      { name: "Titel", weight: 50 },
-      { name: "Auflage", weight: 1 },
-      { name: "InvNr", weight: 100 },
-      { name: "Jahr", weight: 5 },
-      { name: "Beschreibung", weight: 8 },
-      { name: "Material", weight: 4 },
-    ],
-  });
 
   return (
     open &&
@@ -240,7 +267,7 @@ export default function SearchBar({}) {
           </div>
           {searchInput && (
             <div className="text-center text-white">
-              <h2>Ergebnisse für {searchInput}</h2>
+              <h2>Ergebnisse für {searchInput} von {selectedYearRange[0]} - {selectedYearRange[1]} in Werkgruppe {selectedWerkgruppe.label}</h2>
             </div>
           )}
           <div className="p-6 ]ext-center flex items-center justify-evenly gap-2">
@@ -271,7 +298,7 @@ export default function SearchBar({}) {
             </a>
           </div>
           <div className="container text-white p-6 grid grid-cols-2 lg:grid-cols-4 gap-4 ">
-            {displayRows.length > 1 &&
+            {displayRows.length > 0 &&
               displayRows
                 .slice(page * DELTA, page * DELTA + DELTA)
                 .map((row) => (
