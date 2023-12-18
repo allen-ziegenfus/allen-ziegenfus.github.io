@@ -35,6 +35,19 @@ export type Work = {
   Bibliographie: string
 }
 
+
+export type SearchData = {
+  InvNr: string,
+  WerkgruppeSlug: string,
+  Slug: string,
+  Werkgruppe: string,
+  Beschreibung: string,
+  Jahr: string,
+  Titel: string,
+  Bilder: any[],
+  Thumbnail: string,
+}
+
 export type SearchMetadata = {
   MinYear: number,
   MaxYear: number,
@@ -155,13 +168,21 @@ async function performGetWerkgruppen() {
 
     werkgruppen = werkgruppenTemp;
 
-    let records: Work[] = [];
+    let searchData: SearchData[] = [];
 
     werkgruppen.forEach(
-      (workgroup) => (records = records.concat(workgroup.Records))
+      (workgroup) => (searchData = searchData.concat(workgroup.Records))
     );
+    const searchDataPruned = searchData.map((searchData) => ({
+      InvNr: searchData.InvNr,
+      Beschreibung: searchData.Beschreibung,
+      Jahr: searchData.Jahr,
+      Slug: searchData.Slug, Titel: searchData.Titel, Werkgruppe: searchData.Werkgruppe, WerkgruppeSlug: searchData.WerkgruppeSlug,
+      Thumbnail: searchData.Thumbnail
+    }));
+
     await fs.promises.writeFile("./public/searchMetadata.json", JSON.stringify(searchMetadata));
-    await fs.promises.writeFile("./public/records.json", JSON.stringify(records));
+    await fs.promises.writeFile("./public/searchData.json", JSON.stringify(searchDataPruned));
     await fs.promises.writeFile("./public/werkgruppen.json", JSON.stringify(werkgruppen));
 
   } catch (error) {

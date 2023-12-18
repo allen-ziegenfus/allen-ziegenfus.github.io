@@ -76,9 +76,9 @@ export default function SearchBar({}) {
   useEffect(() => {
     async function fetchRecords() {
       try {
-        const recordsresponse = await fetch("/records.json");
-        const recordsresponsejson = await recordsresponse.json();
-        setRecords(recordsresponsejson);
+        const searchDataResponse =  await fetch("/searchData.json");
+        const searchData = await searchDataResponse.json()
+        setRecords(searchData);
         const searchMetadataResponse = await fetch("/searchMetadata.json");
         const searchMetadata = await searchMetadataResponse.json();
         setYearRange([
@@ -104,7 +104,7 @@ export default function SearchBar({}) {
         setFetched(true);
         setInvNrs(searchMetadata.InvNrs);
 
-        const [index, map] = createIndex(recordsresponsejson);
+        const [index, map] = createIndex(searchData);
         setIndex(index);
         setIndexedRecords(map);
       } catch (error) {
@@ -140,8 +140,8 @@ export default function SearchBar({}) {
     const filteredRecords = records.filter(
       (record) =>
         Number(record.Jahr) >= minYear &&
-        Number(record.Jahr) <= maxYear &&
-        (bildVorhanden ? !record.Bilder[0].includes("placeholder") : true) &&
+        Number(record.Jahr) <= maxYear)) &&
+        (bildVorhanden ? !record.Thumbnail.includes("placeholder") : true) &&
         (selectedWerkgruppe.value == "all" ||
           selectedWerkgruppe.value == record.WerkgruppeSlug)
     );
