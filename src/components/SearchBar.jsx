@@ -76,8 +76,8 @@ export default function SearchBar({}) {
   useEffect(() => {
     async function fetchRecords() {
       try {
-        const searchDataResponse =  await fetch("/searchData.json");
-        const searchData = await searchDataResponse.json()
+        const searchDataResponse = await fetch("/searchData.json");
+        const searchData = await searchDataResponse.json();
         setRecords(searchData);
         const searchMetadataResponse = await fetch("/searchMetadata.json");
         const searchMetadata = await searchMetadataResponse.json();
@@ -181,7 +181,6 @@ export default function SearchBar({}) {
     selectedWerkgruppe,
     fetched,
   ]);
-
 
   return (
     open &&
