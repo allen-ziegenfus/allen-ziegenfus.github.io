@@ -34,8 +34,8 @@ export default function SearchBar({}) {
 
         index: [
           { field: "InvNr", tokenize: "strict", minlength: 3 },
-          { field: "Titel", tokenize: "strict", minlength: 3 },
-          { field: "Beschreibung", tokenize: "strict", minlength: 3 },
+          { field: "Titel", tokenize: "full", minlength: 3 },
+          { field: "Beschreibung", tokenize: "full", minlength: 3 },
         ],
       },
       language: "de",
