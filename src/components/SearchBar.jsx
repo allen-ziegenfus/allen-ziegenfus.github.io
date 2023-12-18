@@ -139,8 +139,9 @@ export default function SearchBar({}) {
     const [minYear, maxYear] = selectedYearRange;
     const filteredRecords = records.filter(
       (record) =>
-        Number(record.Jahr) >= minYear &&
-        Number(record.Jahr) <= maxYear)) &&
+        (record.Jahre.length == 0 ||
+          record.Jahre.filter((jahr) => jahr >= minYear && jahr <= maxYear)
+            .length > 0) &&
         (bildVorhanden ? !record.Thumbnail.includes("placeholder") : true) &&
         (selectedWerkgruppe.value == "all" ||
           selectedWerkgruppe.value == record.WerkgruppeSlug)
@@ -264,11 +265,18 @@ export default function SearchBar({}) {
               </div>
             </div>
           </div>
-          {searchInput && (
-            <div className="text-center text-white">
-              <h2>Ergebnisse für {searchInput} von {selectedYearRange[0]} - {selectedYearRange[1]} in Werkgruppe {selectedWerkgruppe.label}</h2>
-            </div>
-          )}
+
+          <div className="text-center text-white">
+            <h2>
+              Ergebnisse {searchInput && <>für {searchInput}</>} von{" "}
+              {selectedYearRange[0]} - {selectedYearRange[1]}{" "}
+              {selectedWerkgruppe.value != "all" && (
+                <span>in Werkgruppe {selectedWerkgruppe.label}</span>
+              )}
+              {bildVorhanden && <>&nbsp;wo Bilder vorhanden sind</>}
+            </h2>
+          </div>
+
           <div className="p-6 ]ext-center flex items-center justify-evenly gap-2">
             <a
               className="cursor-pointer text-2xl"

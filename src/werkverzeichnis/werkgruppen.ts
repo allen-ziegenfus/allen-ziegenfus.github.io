@@ -43,6 +43,7 @@ export type SearchData = {
   Werkgruppe: string,
   Beschreibung: string,
   Jahr: string,
+  Jahre?: number[],
   Titel: string,
   Bilder: any[],
   Thumbnail: string,
@@ -173,11 +174,50 @@ async function performGetWerkgruppen() {
     werkgruppen.forEach(
       (workgroup) => (searchData = searchData.concat(workgroup.Records))
     );
+
+    const processYearRange = (range: string): number[] => {
+      const years: number[] = [];
+      if (!range) { return [] }
+      const hyphenDelimited = range.split("-");
+      if (hyphenDelimited.length == 0) { return []; }
+      if (hyphenDelimited.length == 1) { return hyphenDelimited.map(entry => Number(entry)); }
+      else if (hyphenDelimited.length == 2) {
+
+        const [min, max] = hyphenDelimited;
+
+        for (let i: number = Number(min); i <= Number(max); i++) {
+          years.push(...[i]);
+        }
+        return years;
+      }
+      throw Error("unknown year format: " + range);
+
+
+    }
+    const processYearData = (Jahr: string): number[] => {
+
+
+      if (!Jahr) { return [] }
+      const commaDelimited = Jahr.split(",");
+      if (commaDelimited.length == 0) { return []; }
+      if (commaDelimited.length == 1) { return processYearRange(commaDelimited[0]); }
+
+      const years: number[] = [];
+      for (const entry of commaDelimited) {
+
+        years.push(...processYearRange(entry));
+      }
+
+      return years;
+    }
     const searchDataPruned = searchData.map((searchData) => ({
       InvNr: searchData.InvNr,
       Beschreibung: searchData.Beschreibung,
       Jahr: searchData.Jahr,
-      Slug: searchData.Slug, Titel: searchData.Titel, Werkgruppe: searchData.Werkgruppe, WerkgruppeSlug: searchData.WerkgruppeSlug,
+      Jahre: processYearData(searchData.Jahr),
+      Slug: searchData.Slug, Titel: searchData.Titel,
+      Werkgruppe: searchData.Werkgruppe,
+      WerkgruppeSlug: searchData.WerkgruppeSlug,
       Thumbnail: searchData.Thumbnail
     }));
 
