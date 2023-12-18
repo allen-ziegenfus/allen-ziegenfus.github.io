@@ -22,5 +22,4 @@ pnpm-debug.log*
 .DS_Store
 
 public/images
-public/records.json
 public/*.json
