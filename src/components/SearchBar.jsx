@@ -6,7 +6,6 @@ import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import Select from "react-select";
 
-let didInit = false;
 export default function SearchBar({}) {
   const urlParams = new URLSearchParams(window.location.search);
   const search = urlParams.get("search");
