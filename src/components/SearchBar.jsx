@@ -53,10 +53,6 @@ export default function SearchBar({}) {
 
   function openSearch(e) {
     setOpen(true);
-    /*
-    [...document.querySelectorAll(".lg\\:hidden.astronav-toggle, .lg\\:hidden .astronav-toggle")].forEach((el) => {
-      el.classList.toggle("hidden");
-    });*/
   }
   useEffect(() => {
     window.addEventListener("openSearch", openSearch);
