@@ -20,7 +20,7 @@ const { werkgruppe, slug } = Astro.props;
 <Layout title={werkgruppe.Titel + ' - ' + WEBSITE_TITLE}>
   <main>
     <nav class="print:hidden">
-      <ul class="flex flex-row">
+      <ul class="flex flex-row flex-wrap">
         <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
         <li>
           <a class="text-blue-800" href={`/${werkgruppe.Slug}`}> {werkgruppe.Titel}</a>
