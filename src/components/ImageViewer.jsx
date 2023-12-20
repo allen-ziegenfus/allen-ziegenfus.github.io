@@ -7,13 +7,25 @@ export default function ImageViewer({ imgs, title }) {
   const [index, setIndex] = useState(0);
 
   const mainSrc = imgs[0]?.src;
-  const isVideo = imgs[0]?.src.endsWith(".webm");
+  const isVideo =
+    imgs[0]?.src.endsWith(".webm") || imgs[0]?.src.endsWith(".mp4");
   return (
     <div className="flex flex-row flex-wrap justify-center">
-      {isVideo && <video src={mainSrc} controls alt={title} />}
-      {!isVideo && <img className="w-full" src={mainSrc} alt={title}/>}
+      {isVideo && (
+        <video className="w-full" controls alt={title}>
+          {imgs.map((video) => {
+            const parsedSrc = video.src.split(".");
+            const extension = parsedSrc[parsedSrc.length - 1];
+            return (
+              <source src={video.src} type={"video/" + extension}></source>
+            );
+          })}
+        </video>
+      )}
+      {!isVideo && <img className="w-full" src={mainSrc} alt={title} />}
       <div className="flex flex-wrap mx-auto align-center justify-center">
-        {imgs.length > 1 &&
+        {!isVideo &&
+          imgs.length > 1 &&
           imgs.map((img, index) => (
             <img
               className="cursor-pointer w-28 m-1"
@@ -26,12 +38,12 @@ export default function ImageViewer({ imgs, title }) {
             />
           ))}
       </div>
-      <Lightbox 
+      <Lightbox
         open={open}
         close={() => setOpen(false)}
         index={index}
         slides={imgs}
-        />
+      />
     </div>
   );
 }

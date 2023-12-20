@@ -268,12 +268,16 @@ async function getAttachmentURL(attachment: any, slug: string, index: number) {
   const base_filename = `${slug}-${String(index).padStart(2, '0')}`;
 
   const isVideo = attachment && attachment.type.startsWith("video");
+  let videoExtension = "webm";
+  if (isVideo) {
+    [,videoExtension] = attachment.type.split("/");
+  }
   let attachmentUrl = attachment.url;
   if (attachment?.thumbnails?.large?.url) {
     attachmentUrl = attachment?.thumbnails?.large?.url;
   }
   if (attachmentUrl) {
-    const new_filename = isVideo ? `images/${base_filename}.webm` : `images/${base_filename}.webp`
+    const new_filename = isVideo ? `images/${base_filename}.${videoExtension}` : `images/${base_filename}.webp`
     const new_filepath = `./public/${new_filename}`;
     const downloadpath = isVideo ? new_filepath : `./build/images/${attachment.filename}`;
     try {
