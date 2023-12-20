@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Card from "../components/Card.astro";
 import werkgruppen from "../../public/werkgruppen.json";
-import {WEBSITE_TITLE} from "../constants";
+import { WEBSITE_TITLE } from "../constants";
 ---
 
 <Layout title={WEBSITE_TITLE}>
@@ -15,12 +15,14 @@ import {WEBSITE_TITLE} from "../constants";
     <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
       {
         werkgruppen.map((werkgruppe) => (
-          <Card
-            href={werkgruppe.Slug}
-            title={werkgruppe.Titel + " (" + werkgruppe.Count + ")"}
-            body=""
-            thumbnail={werkgruppe.Thumbnail}
-          />
+          <ul>
+            <Card
+              href={werkgruppe.Slug}
+              title={werkgruppe.Titel + " (" + werkgruppe.Count + ")"}
+              body=""
+              thumbnail={werkgruppe.Thumbnail}
+            />
+          </ul>
         ))
       }
     </div>
