@@ -2,10 +2,8 @@
 import Card from "../components/Card.astro";
 import Layout from "../layouts/Layout.astro";
 import werkgruppen from "../../public/werkgruppen.json";
-import { WEBSITE_TITLE
- } from "../constants";
+import { WEBSITE_TITLE } from "../constants";
 export async function getStaticPaths() {
-
   return werkgruppen.map((werkgruppe) => ({
     params: {
       slug: werkgruppe.Slug,
@@ -14,20 +12,24 @@ export async function getStaticPaths() {
   }));
 }
 const { werkgruppe, slug } = Astro.props;
-
 ---
 
-<Layout title={werkgruppe.Titel + ' - ' + WEBSITE_TITLE}>
+<Layout
+  title={werkgruppe.Titel + " - " + WEBSITE_TITLE}
+  image={werkgruppe.Thumbnail}
+>
   <main>
     <nav class="print:hidden">
       <ul class="flex flex-row flex-wrap">
         <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
         <li>
-          <a class="text-blue-800" href={`/${werkgruppe.Slug}`}> {werkgruppe.Titel}</a>
+          <a class="text-blue-800" href={`/${werkgruppe.Slug}`}>
+            {werkgruppe.Titel}</a
+          >
         </li>
       </ul>
     </nav>
-    <h2 class="text-lg md:text-2xl py-3">{werkgruppe.Titel}</h2> 
+    <h2 class="text-lg md:text-2xl py-3">{werkgruppe.Titel}</h2>
     <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
       {
         werkgruppe &&

@@ -7,5 +7,6 @@ import react from "@astrojs/react";
 // https://astro.build/config
 export default defineConfig({
   integrations: [tailwind(), astroImageTools, react()],
-  site: 'https://allen-ziegenfus.github.com'
+  //site: 'https://werkverzeichnis.vollrad-kutscher.de'
+  site: 'https://werkverzeichnis.allenz.net'
 });

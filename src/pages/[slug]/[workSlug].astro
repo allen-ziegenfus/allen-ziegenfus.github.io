@@ -55,7 +55,11 @@ const imgs = await Promise.all(
 );
 ---
 
-<Layout title={work.Titel + " - " + WEBSITE_TITLE}>
+<Layout
+  title={work.Titel + " - " + WEBSITE_TITLE}
+  description={work.Beschreibung}
+  image={work.Thumbnail}
+>
   <SearchNavigation client:only />
   <nav class="print:hidden">
     <ul class="flex flex-row flex-wrap">
