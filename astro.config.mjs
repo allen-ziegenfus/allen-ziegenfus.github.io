@@ -9,6 +9,5 @@ import sitemap from "@astrojs/sitemap";
 // https://astro.build/config
 export default defineConfig({
   integrations: [tailwind(), astroImageTools, react(), sitemap()],
-  //site: 'https://werkverzeichnis.vollrad-kutscher.de'
   site: process.env.SITE
 });
