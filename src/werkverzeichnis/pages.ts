@@ -51,4 +51,15 @@ async function getPages() {
   await fs.promises.writeFile("./public/pages.json", JSON.stringify(pages));
 }
 
+async function writeRobotsTxt() {
+
+  await fs.promises.writeFile("./public/robots.txt",
+    `User-agent: *
+Allow: /
+
+Sitemap: ${process.env.SITE}/sitemap-index.xml
+`);
+}
+
 await getPages();
+await writeRobotsTxt();
