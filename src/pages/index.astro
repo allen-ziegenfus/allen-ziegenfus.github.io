@@ -2,10 +2,9 @@
 import Layout from "../layouts/Layout.astro";
 import Card from "../components/Card.astro";
 import werkgruppen from "../../public/werkgruppen.json";
-import { WEBSITE_TITLE } from "../constants";
 ---
 
-<Layout title={WEBSITE_TITLE} image={werkgruppen[0].Thumbnail}>
+<Layout title={import.meta.env.WEBSITE_TITLE} image={werkgruppen[0].Thumbnail}>
   <main>
     <nav class="print:hidden">
       <ul class="m-2 flex flex-row">

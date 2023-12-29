@@ -4,7 +4,6 @@ import ImageViewer from "../../components/ImageViewer.jsx";
 import { Eigenschaft, EigenschaftWithLink } from "../../components/Eigenschaft";
 import werkgruppen from "../../../public/werkgruppen.json";
 import SearchNavigation from "../../components/SearchNavigation";
-import { WEBSITE_TITLE } from "../../constants";
 
 export async function getStaticPaths() {
   const works = [];
@@ -56,7 +55,7 @@ const imgs = await Promise.all(
 ---
 
 <Layout
-  title={work.Titel + " - " + WEBSITE_TITLE}
+  title={work.Titel + " - " + import.meta.env.WEBSITE_TITLE}
   description={work.Beschreibung}
   image={work.Thumbnail}
 >

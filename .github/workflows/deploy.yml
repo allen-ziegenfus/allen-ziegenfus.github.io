@@ -19,7 +19,10 @@ permissions:
 jobs:
   build:
     env:
-      SITE: ${{ secrets.SITE }}
+      SITE: ${{ vars.SITE }}
+      WEBSITE_TITLE: ${{ vars.WEBSITE_TITLE }}
+      WEBSITE_TITLE_MOBILE_LINE_1: ${{ vars.WEBSITE_TITLE_MOBILE_LINE_1 }}
+      WEBSITE_TITLE_MOBILE_LINE_2: ${{ vars.WEBSITE_TITLE_MOBILE_LINE_2 }}
       ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
       WORKSPACE_ID: ${{ secrets.WORKSPACE_ID }}
       BASE_ID: ${{ secrets.BASE_ID }}

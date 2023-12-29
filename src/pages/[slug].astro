@@ -2,7 +2,6 @@
 import Card from "../components/Card.astro";
 import Layout from "../layouts/Layout.astro";
 import werkgruppen from "../../public/werkgruppen.json";
-import { WEBSITE_TITLE } from "../constants";
 export async function getStaticPaths() {
   return werkgruppen.map((werkgruppe) => ({
     params: {
@@ -15,7 +14,7 @@ const { werkgruppe, slug } = Astro.props;
 ---
 
 <Layout
-  title={werkgruppe.Titel + " - " + WEBSITE_TITLE}
+  title={werkgruppe.Titel + " - " + import.meta.env.WEBSITE_TITLE}
   image={werkgruppe.Thumbnail}
 >
   <main>

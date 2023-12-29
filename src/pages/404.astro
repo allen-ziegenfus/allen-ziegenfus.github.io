@@ -1,9 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { WEBSITE_TITLE } from "../constants";
 ---
 
-<Layout title={WEBSITE_TITLE}>
+<Layout title={import.meta.env.WEBSITE_TITLE}>
   <main>
     <h1 class="text-center text-2xl">404</h1>
     <h2 class="text-center m-3" >Entschuldigung, die Seite wurde nicht gefunden.</h2>

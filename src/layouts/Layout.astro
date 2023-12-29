@@ -72,10 +72,10 @@ const socialImageURL = new URL(image, canonicalURL);
       >
         <a class="flex-grow" href="/"
           ><h1 class="text-lg md:text-2xl lg:hidden print:hidden">
-            Werkverzeichnis von <br />Vollrad Kutscher ab 1968
+            {import.meta.env.WEBSITE_TITLE_MOBILE_LINE_1} <br/> {import.meta.env.WEBSITE_TITLE_MOBILE_LINE_2}
           </h1>
           <h1 class="text-lg md:text-2xl hidden lg:block print:block">
-            Werkverzeichnis von Vollrad Kutscher ab 1968
+            {import.meta.env.WEBSITE_TITLE}
           </h1></a
         >
         <div class="lg:hidden ml-2 print:hidden">
