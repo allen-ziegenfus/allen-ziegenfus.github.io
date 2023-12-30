@@ -156,7 +156,12 @@ export default function SearchBar({}) {
         });
         const rankedResults = [];
         searchResults.forEach((result) => rankedResults.push(...result.result));
-        recordsToShow = rankedResults.map((InvNr) => indexedRecords[InvNr]);
+        const uniqueRankedResults = rankedResults.filter(function (item, pos) {
+          return rankedResults.indexOf(item) == pos;
+        });
+        recordsToShow = uniqueRankedResults.map(
+          (InvNr) => indexedRecords[InvNr]
+        );
       }
     }
 
