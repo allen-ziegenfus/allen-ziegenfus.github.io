@@ -132,7 +132,7 @@ async function performGetWerkgruppen() {
             Literatur: record.fields.Literatur,
             Bibliographie: record.fields.Bibliographie,
             Bilder: bilder,
-            Thumbnail: bilder[0].endsWith(".webm") ? "/placeholder.png" : bilder[0]
+            Thumbnail: (bilder[0].endsWith(".webm") || bilder[0].endsWith(".mp4")) ? "/placeholder.png" : bilder[0]
           };
 
           const year = Number(record.fields.Jahr);
@@ -270,7 +270,7 @@ async function getAttachmentURL(attachment: any, slug: string, index: number) {
   const isVideo = attachment && attachment.type.startsWith("video");
   let videoExtension = "webm";
   if (isVideo) {
-    [,videoExtension] = attachment.type.split("/");
+    [, videoExtension] = attachment.type.split("/");
   }
   let attachmentUrl = attachment.url;
   if (attachment?.thumbnails?.large?.url) {
