@@ -1,0 +1,74 @@
+name: Deploy to Cloudflare Pages
+
+# Manual only, and it builds whatever branch you pick. The workflow file lives on
+# the default branch so it appears in the Actions tab; `source_ref` decides what
+# actually gets built, so a branch can be deployed without merging it first.
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Branch to build from
+        required: true
+        default: sheets-build
+      site:
+        description: Public URL of this deployment (blank = the SITE variable)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  id-token: write          # required for the keyless Google auth below
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SITE: ${{ inputs.site || vars.SITE }}
+      WEBSITE_TITLE: ${{ vars.WEBSITE_TITLE }}
+      WEBSITE_TITLE_MOBILE_LINE_1: ${{ vars.WEBSITE_TITLE_MOBILE_LINE_1 }}
+      WEBSITE_TITLE_MOBILE_LINE_2: ${{ vars.WEBSITE_TITLE_MOBILE_LINE_2 }}
+      COPYRIGHT_AUTHOR: ${{ vars.COPYRIGHT_AUTHOR }}
+      SHEET_ID: ${{ vars.SHEET_ID }}
+      DRIVE_FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
+      STRICT: '1'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      # A cold build pulls ~3,100 files and ~810 MB out of Drive. The rolling key
+      # restores the newest cache and saves an updated one.
+      - name: Restore downloaded originals
+        uses: actions/cache@v4
+        with:
+          path: .cache/originals
+          key: drive-originals-${{ github.run_id }}
+          restore-keys: drive-originals-
+
+      # Exchanges this job's OIDC token for a short-lived Google access token.
+      # Nothing long-lived is stored; the provider is pinned to this repository.
+      - name: Authenticate to Google
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github/providers/repo
+          service_account: ${{ vars.SA }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      # Reads the Sheet and Drive, then renders to dist/.
+      - run: yarn build
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy dist
+            --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME }}
+            --branch=${{ inputs.source_ref }}
