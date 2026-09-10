@@ -5,11 +5,10 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "node --version && yarn airtable-assets && yarn airtable-pages && astro build",
+    "build": "yarn sheets-assets && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "airtable-assets": "node --no-warnings --loader ts-node/esm src/werkverzeichnis/werkgruppen.ts",
-    "airtable-pages": "node --no-warnings --loader ts-node/esm src/werkverzeichnis/pages.ts"
+    "sheets-assets": "node --no-warnings --loader ts-node/esm src/werkverzeichnis/sheets.ts"
   },
   "dependencies": {
     "@astrojs/react": "^2.1.1",
@@ -22,9 +21,9 @@
     "astro": "^2.2.0",
     "astro-imagetools": "^0.8.1",
     "astro-navbar": "^2.3.0",
-    "axios": "^1.4.0",
     "dotenv": "^16.0.3",
     "flexsearch": "^0.7.31",
+    "googleapis": "^178.1.1",
     "marked": "^9.1.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",

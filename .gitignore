@@ -24,3 +24,6 @@ pnpm-debug.log*
 public/images
 public/*.json
 public/robots.txt
+
+# images downloaded from Drive, restored from the CI cache between runs
+.cache/

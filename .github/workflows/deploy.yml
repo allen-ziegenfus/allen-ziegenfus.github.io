@@ -1,16 +1,15 @@
 name: Deploy Site to GitHub Pages
 
 on:
-  # Trigger the workflow every time you push to the `main` branch
-  # Using a different branch name? Replace `main` with your branch’s name
   push:
     branches: [ master ]
-  schedule: 
+  schedule:
     - cron: '0 0 * * *'
   # Allows you to run this workflow manually from the Actions tab on GitHub.
   workflow_dispatch:
-  
-# Allow this job to clone the repo and create a page deployment
+
+# id-token: write is what lets the job request an OIDC token, which is what makes
+# the Google side keyless. contents/pages are for the deployment itself.
 permissions:
   contents: read
   pages: write
@@ -24,20 +23,40 @@ jobs:
       WEBSITE_TITLE_MOBILE_LINE_1: ${{ vars.WEBSITE_TITLE_MOBILE_LINE_1 }}
       WEBSITE_TITLE_MOBILE_LINE_2: ${{ vars.WEBSITE_TITLE_MOBILE_LINE_2 }}
       COPYRIGHT_AUTHOR: ${{ vars.COPYRIGHT_AUTHOR }}
-      ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-      WORKSPACE_ID: ${{ secrets.WORKSPACE_ID }}
-      BASE_ID: ${{ secrets.BASE_ID }}
-      TABLE_NAME: ${{ secrets.TABLE_NAME }}
+      SHEET_ID: ${{ vars.SHEET_ID }}
+      DRIVE_FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
+      # Bad data should fail the build rather than publish a gap.
+      STRICT: '1'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout your repository using git
         uses: actions/checkout@v5
+
+      # Without this the build re-downloads ~3,100 files and ~810 MB from Drive on
+      # every run — slow, and enough to run into Drive's quota. The rolling key
+      # means each run restores the newest cache and saves an updated one.
+      - name: Restore downloaded originals
+        uses: actions/cache@v4
+        with:
+          path: .cache/originals
+          key: drive-originals-${{ github.run_id }}
+          restore-keys: drive-originals-
+
+      # Exchanges the job's OIDC token for a short-lived Google access token and
+      # writes it where GoogleAuth will find it. Nothing long-lived is stored.
+      # The provider must pin attribute.repository to this repo — see the runbook.
+      - name: Authenticate to Google
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github/providers/repo
+          service_account: ${{ vars.SA }}
+
       - name: Install, build, and upload your site
         uses: withastro/action@v4
         with:
-                path: . 
-                node-version: 18
-                package-manager: yarn 
+          path: .
+          node-version: 20
+          package-manager: yarn
 
   deploy:
     needs: build
