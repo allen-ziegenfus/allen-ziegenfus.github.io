@@ -1,4 +1,25 @@
-# Sheet-side data checks
+# Sheet-side tooling
+
+Two things, both reached from a **Werkverzeichnis** menu in the Sheet.
+
+## Neues Werk (`Form.gs` + `Form.html`)
+
+A sidebar that adds a work and uploads its images. It derives the filenames
+(`<slug>-NN.<ext>`) from the Inv. Nr., which is the one rule an editor cannot see and
+cannot easily get right by hand.
+
+Before writing anything it applies the build's own uniqueness rules — duplicate URL,
+and one slug being a filename prefix of another — so a rejected work leaves the Sheet
+and Drive untouched. Only image types the build can decode are accepted; `.pdf` is
+refused, which is how the existing 14 image-less works came about.
+
+It runs as **the editor**, so that person needs Editor access to the Drive folder.
+The build's service account stays Viewer.
+
+Set the folder once: **Werkverzeichnis → Bilder-Ordner festlegen** (the ID from the
+Drive folder URL). New works appear on the site after the next build.
+
+## Daten prüfen (`Validate.gs`)
 
 `Validate.gs` re-runs most of `sheets.ts`'s validation inside the Sheet, so a bad row
 is caught while someone is looking at it rather than half an hour later in a failed

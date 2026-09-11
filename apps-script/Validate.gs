@@ -33,7 +33,10 @@ var REPORT = "_Prüfung";
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Werkverzeichnis")
+    .addItem("Neues Werk", "showAddWorkForm")
     .addItem("Daten prüfen", "checkData")
+    .addSeparator()
+    .addItem("Bilder-Ordner festlegen", "setDriveFolder")
     .addToUi();
 }
 

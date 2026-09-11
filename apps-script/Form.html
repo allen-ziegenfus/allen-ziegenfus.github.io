@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font: 13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+             margin: 0; padding: 12px; color: #202124; }
+      label { display: block; margin: 10px 0 3px; font-weight: 600; font-size: 12px; }
+      input[type=text], select, textarea {
+        width: 100%; box-sizing: border-box; padding: 5px 6px;
+        border: 1px solid #c4c7c5; border-radius: 4px; font: inherit; }
+      textarea { min-height: 52px; resize: vertical; }
+      .hint { color: #5f6368; font-size: 11px; margin-top: 3px; }
+      .slug { font-family: ui-monospace, Menlo, monospace; }
+      button { margin-top: 14px; width: 100%; padding: 8px; border: 0;
+               border-radius: 4px; background: #0b57d0; color: #fff;
+               font: inherit; font-weight: 600; cursor: pointer; }
+      button[disabled] { background: #9aa0a6; cursor: default; }
+      #msg { margin-top: 12px; padding: 8px; border-radius: 4px;
+             white-space: pre-wrap; display: none; }
+      .err { background: #fce8e6; color: #a50e0e; }
+      .ok  { background: #e6f4ea; color: #0d652d; }
+      hr { border: 0; border-top: 1px solid #e0e0e0; margin: 14px 0; }
+    </style>
+  </head>
+  <body>
+    <label for="tab">Werkgruppe</label>
+    <select id="tab"></select>
+
+    <div id="fields"></div>
+
+    <hr>
+
+    <label for="files">Bilder</label>
+    <input type="file" id="files" multiple
+           accept=".webp,.jpg,.jpeg,.png,.gif,.tif,.tiff,.webm,.mp4">
+    <div class="hint" id="names">
+      Werden automatisch umbenannt — die Reihenfolge hier bestimmt die
+      Reihenfolge auf der Seite, das erste Bild wird das Vorschaubild.
+    </div>
+
+    <button id="save" disabled>Werk anlegen</button>
+    <div id="msg"></div>
+
+    <script>
+      var CONFIG = null;
+
+      google.script.run.withSuccessHandler(init).getFormConfig();
+
+      function init(config) {
+        CONFIG = config;
+        var tab = document.getElementById('tab');
+        config.werkgruppen.forEach(function (g) {
+          var o = document.createElement('option');
+          o.value = g.tab; o.textContent = g.titel;
+          tab.appendChild(o);
+        });
+
+        var wrap = document.getElementById('fields');
+        config.columns.forEach(function (col) {
+          var id = 'f_' + col.replace(/[^A-Za-z0-9]/g, '_');
+          var label = document.createElement('label');
+          label.setAttribute('for', id);
+          label.textContent = col === 'Inv. Nr.' ? col + ' *' : col;
+          wrap.appendChild(label);
+
+          var long = ['Beschreibung', 'Material', 'Ausstellung',
+                      'Literatur', 'Bibliographie'].indexOf(col) !== -1;
+          var el = document.createElement(long ? 'textarea' : 'input');
+          if (!long) el.type = 'text';
+          el.id = id;
+          el.dataset.col = col;
+          wrap.appendChild(el);
+
+          if (col === 'Inv. Nr.') {
+            var hint = document.createElement('div');
+            hint.className = 'hint';
+            hint.id = 'slughint';
+            wrap.appendChild(hint);
+            el.addEventListener('input', showSlug);
+          }
+        });
+
+        document.getElementById('save').disabled = false;
+      }
+
+      // Mirrors the site's slugify closely enough to preview the URL. The server
+      // uses the real one, so treat this as a hint, not a guarantee.
+      function previewSlug(s) {
+        return s.normalize('NFKD')
+          .replace(/ä/gi, 'ae').replace(/ö/gi, 'oe').replace(/ü/gi, 'ue')
+          .replace(/ß/g, 'ss')
+          .replace(/[^\w\s$*_+~.()'"!\-:@]+/g, '')
+          .trim().replace(/\s+/g, '-').toLowerCase();
+      }
+
+      function showSlug() {
+        var v = this.value.trim();
+        var hint = document.getElementById('slughint');
+        hint.innerHTML = v
+          ? 'URL und Dateinamen: <span class="slug">' + previewSlug(v) + '-01</span>'
+          : '';
+      }
+
+      document.getElementById('files').addEventListener('change', function () {
+        var names = document.getElementById('names');
+        if (!this.files.length) return;
+        names.textContent = this.files.length + ' Datei(en) — '
+          + Array.prototype.map.call(this.files, function (f) { return f.name; })
+              .join(', ');
+      });
+
+      document.getElementById('save').addEventListener('click', function () {
+        var btn = this;
+        var msg = document.getElementById('msg');
+        msg.style.display = 'none';
+
+        var values = {};
+        Array.prototype.forEach.call(
+          document.querySelectorAll('[data-col]'), function (el) {
+            values[el.dataset.col] = el.value.trim();
+          });
+
+        if (!values['Inv. Nr.']) return fail('Inv. Nr. fehlt.');
+
+        btn.disabled = true;
+        btn.textContent = 'Wird angelegt …';
+
+        readFiles(document.getElementById('files').files, function (files) {
+          google.script.run
+            .withSuccessHandler(done)
+            .withFailureHandler(function (e) { fail(e.message); })
+            .addWork({
+              tab: document.getElementById('tab').value,
+              values: values,
+              files: files
+            });
+        });
+
+        function done(res) {
+          btn.disabled = false;
+          btn.textContent = 'Werk anlegen';
+          msg.className = 'ok';
+          msg.style.display = 'block';
+          msg.textContent = res.inv + ' angelegt.\n'
+            + (res.images.length
+                ? res.images.join('\n')
+                : 'Keine Bilder hochgeladen.')
+            + '\nSeite: ' + res.url
+            + '\n\nErscheint nach dem nächsten Build.';
+          Array.prototype.forEach.call(
+            document.querySelectorAll('[data-col]'),
+            function (el) { el.value = ''; });
+          document.getElementById('files').value = '';
+          document.getElementById('slughint').innerHTML = '';
+        }
+
+        function fail(text) {
+          btn.disabled = false;
+          btn.textContent = 'Werk anlegen';
+          msg.className = 'err';
+          msg.style.display = 'block';
+          msg.textContent = text;
+        }
+      });
+
+      /** Read the picked files as base64, in order, then hand them over at once. */
+      function readFiles(fileList, done) {
+        var files = Array.prototype.slice.call(fileList);
+        var out = [];
+        (function next(i) {
+          if (i >= files.length) return done(out);
+          var reader = new FileReader();
+          reader.onload = function () {
+            out.push({
+              name: files[i].name,
+              dataB64: reader.result.split(',')[1]
+            });
+            next(i + 1);
+          };
+          reader.readAsDataURL(files[i]);
+        })(0);
+      }
+    </script>
+  </body>
+</html>
