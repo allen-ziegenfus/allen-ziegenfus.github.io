@@ -104,23 +104,29 @@ export function googleSource(sheetId: string, folderId: string, cacheDir: string
   const drive = google.drive({ version: "v3", auth });
 
   const listings = new Map<string, string[]>();
-  const fileIds = new Map<string, string>();          // "<dir>/<filename>" -> file id
+  // "<dir>/<filename>" -> the file's id and a version stamp that changes when its
+  // bytes do. The stamp is what keeps a replaced image from being served from cache.
+  const files = new Map<string, { id: string; version: string }>();
 
   async function children(parent: string, foldersOnly = false) {
-    const out: { id: string; name: string }[] = [];
+    const out: { id: string; name: string; version: string }[] = [];
     let pageToken: string | undefined;
     do {
       const res: any = await drive.files.list({
         q: `'${parent}' in parents and trashed = false`
           + (foldersOnly ? " and mimeType = 'application/vnd.google-apps.folder'" : ""),
-        fields: "nextPageToken, files(id, name)",
+        fields: "nextPageToken, files(id, name, md5Checksum, modifiedTime)",
         pageSize: 1000,
         pageToken,
         supportsAllDrives: true,
         includeItemsFromAllDrives: true,
       });
       for (const f of res.data.files ?? []) {
-        if (f.id && f.name) out.push({ id: f.id, name: f.name });
+        if (!f.id || !f.name) continue;
+        // md5 for uploaded binaries; modifiedTime is the fallback. Either changes
+        // when the file is replaced, which is all the cache needs.
+        const version = String(f.md5Checksum ?? f.modifiedTime ?? "").replace(/\W/g, "");
+        out.push({ id: f.id, name: f.name, version });
       }
       pageToken = res.data.nextPageToken ?? undefined;
     } while (pageToken);
@@ -164,22 +170,38 @@ export function googleSource(sheetId: string, folderId: string, cacheDir: string
       for (const dir of dirs) {
         const id = folders.get(dir);
         if (!id) { listings.set(dir, []); continue; }
-        const files = await children(id);
-        for (const f of files) fileIds.set(`${dir}/${f.name}`, f.id);
-        listings.set(dir, files.map(f => f.name).sort());
+        const found = await children(id);
+        for (const f of found) {
+          files.set(`${dir}/${f.name}`, { id: f.id, version: f.version });
+        }
+        listings.set(dir, found.map(f => f.name).sort());
       }
     },
 
     async original(dir, filename) {
-      const id = fileIds.get(`${dir}/${filename}`);
-      if (!id) return null;
-      const dest = path.join(cacheDir, dir, filename);
+      const file = files.get(`${dir}/${filename}`);
+      if (!file) return null;
+
+      // The version goes in the cached name, so replacing a file in Drive is a
+      // cache miss rather than a stale hit that never expires.
+      const cached = file.version ? `${file.version}-${filename}` : filename;
+      const into = path.join(cacheDir, dir);
+      const dest = path.join(into, cached);
       if (fs.existsSync(dest) && fs.statSync(dest).size > 0) return dest;
-      fs.mkdirSync(path.dirname(dest), { recursive: true });
+
+      fs.mkdirSync(into, { recursive: true });
       const res: any = await drive.files.get(
-        { fileId: id, alt: "media", supportsAllDrives: true },
+        { fileId: file.id, alt: "media", supportsAllDrives: true },
         { responseType: "arraybuffer" });
       fs.writeFileSync(dest, Buffer.from(res.data as ArrayBuffer));
+
+      // Drop older versions of this same file so the cache does not grow a copy
+      // per edit.
+      for (const other of fs.readdirSync(into)) {
+        if (other !== cached && other.endsWith(`-${filename}`)) {
+          fs.rmSync(path.join(into, other), { force: true });
+        }
+      }
       return dest;
     },
   };

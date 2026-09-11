@@ -62,15 +62,29 @@ async function materialise(filename: string, dir: string, slug: string, index: n
   const ext = path.extname(filename).toLowerCase();
   if (ext === ".webm" || ext === ".mp4") {
     const dest = path.join(IMAGES, base + ext);
-    if (!fs.existsSync(dest)) fs.copyFileSync(src, dest);
+    if (stale(dest, src)) fs.copyFileSync(src, dest);
     return `/images/${base}${ext}`;
   }
   const dest = path.join(IMAGES, `${base}.webp`);
-  if (!fs.existsSync(dest) || fs.statSync(dest).size === 0) {
+  if (stale(dest, src)) {
     try { await sharp(src).webp().toFile(dest); }
     catch (e) { console.warn(`  convert failed ${filename}: ${e}`); return "/placeholder.png"; }
   }
   return `/images/${base}.webp`;
+}
+
+/**
+ * Is the output missing, empty, or older than its source?
+ *
+ * The mtime comparison is what makes a replaced image propagate. Skipping purely
+ * on existence means a corrected original is converted once and then never again,
+ * and the site keeps serving the old picture with nothing reporting it.
+ */
+function stale(dest: string, src: string): boolean {
+  if (!fs.existsSync(dest)) return true;
+  const out = fs.statSync(dest);
+  if (out.size === 0) return true;
+  return fs.statSync(src).mtimeMs > out.mtimeMs;
 }
 
 function expandYears(jahr?: string): number[] {
