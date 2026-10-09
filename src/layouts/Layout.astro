@@ -15,12 +15,13 @@ export interface Props {
   title: string;
   description?: string;
   image?: string;
+  noindex?: boolean;
 }
 
 const footerPages = pages.filter((page) => page.Kategorie === "Footer");
 const headerPages = pages.filter((page) => page.Kategorie === "Header");
 const year = new Date().getFullYear();
-const { title, description, image } = Astro.props;
+const { title, description, image, noindex } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const domain = canonicalURL.host;
@@ -35,6 +36,7 @@ const socialImageURL = new URL(image, canonicalURL);
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <meta name="generator" content={Astro.generator} />
+    {noindex && <meta name="robots" content="noindex" />}
 
     <meta property="og:url" content={canonicalURL} />
     <meta property="twitter:url" content={canonicalURL} />
@@ -335,7 +337,35 @@ const socialImageURL = new URL(image, canonicalURL);
             ))
           }
         </ul>
-        <p>Copyright © {year} {import.meta.env.COPYRIGHT_AUTHOR}</p>
+        <p>
+          Copyright © {year} {import.meta.env.COPYRIGHT_AUTHOR}
+          <a id="editor-login"
+             class="ml-3 text-sm text-gray-400 hover:text-gray-600 print:hidden inline-flex items-center gap-1 align-middle"
+             href="/bearbeiten/" rel="nofollow">Anmelden</a>
+        </p>
+        <script is:inline>
+          // Signed into the editor in this tab? Show who, instead of "Anmelden".
+          // Reads what src/components/editorAuth.js stores; nothing here is checked
+          // by Google, so it is display only.
+          (function () {
+            try {
+              var t = JSON.parse(sessionStorage.getItem("werkverzeichnis.token"));
+              if (!t || !t.profile || t.expires_at - Date.now() < 60000) return;
+              var a = document.getElementById("editor-login");
+              a.textContent = "";
+              a.title = "Angemeldet als " + t.profile.email;
+              if (t.profile.picture) {
+                var img = document.createElement("img");
+                img.src = t.profile.picture;
+                img.alt = "";
+                img.referrerPolicy = "no-referrer";
+                img.className = "w-5 h-5 rounded-full";
+                a.appendChild(img);
+              }
+              a.appendChild(document.createTextNode("Bearbeiten"));
+            } catch (e) {}
+          })();
+        </script>
       </nav>
     </footer>
   </body>

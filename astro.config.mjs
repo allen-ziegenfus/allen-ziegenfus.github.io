@@ -8,6 +8,6 @@ import sitemap from "@astrojs/sitemap";
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [tailwind(), astroImageTools, react(), sitemap()],
+  integrations: [tailwind(), astroImageTools, react(), sitemap({ filter: (page) => !page.includes("/bearbeiten/") })],
   site: process.env.SITE
 });
