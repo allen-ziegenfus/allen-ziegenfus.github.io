@@ -1,28 +1,94 @@
 rules_version = '2';
 
 // Firestore test (FIRESTORE.md). The build reads with a service account, which
-// bypasses these rules; they govern the browser editor only.
+// bypasses these rules; they govern the browser editor and admin page only.
+//
+// Three roles:
+//   super-admin   a document admins/{email}, set in Firestore Studio only.
+//                 Creates artists and names their admins.
+//   artist admin  listed in artists/{a}.admins. Settings, editors, Werkgruppen.
+//   editor        listed in artists/{a}.editors. Edits works.
+// Each role includes the ones below it.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function artistDoc(artist) {
-      return get(/databases/$(database)/documents/artists/$(artist));
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
     }
 
-    // Signed in with a verified Google email that the artist lists as editor.
+    function email() {
+      return request.auth.token.email;
+    }
+
+    function isSuperAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(email()));
+    }
+
+    function artistData(artist) {
+      return get(/databases/$(database)/documents/artists/$(artist)).data;
+    }
+
+    function isArtistAdmin(artist) {
+      return isSuperAdmin() || (signedIn() && email() in artistData(artist).get("admins", []));
+    }
+
     function isEditor(artist) {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email in artistDoc(artist).data.editors;
+      return isArtistAdmin(artist) || (signedIn() && email() in artistData(artist).get("editors", []));
     }
 
-    // The editors list itself is only changed with admin credentials.
+    // Lets the admin page find out whether you are a super-admin.
+    match /admins/{admin} {
+      allow get: if signedIn() && admin == email();
+    }
+
+    function validArtist(d) {
+      return d.keys().hasOnly(["titel", "websiteTitel", "titelZeile1", "titelZeile2",
+                               "copyright", "editors", "admins", "active", "updatedAt"])
+        && d.titel is string && d.titel.size() > 0
+        && d.websiteTitel is string && d.titelZeile1 is string
+        && d.titelZeile2 is string && d.copyright is string
+        && d.editors is list && d.editors.size() <= 50
+        && d.admins is list && d.admins.size() <= 20
+        && d.active is bool
+        && d.updatedAt == request.time;
+    }
+
     match /artists/{artist} {
-      allow read: if isEditor(artist);
+      allow get: if isEditor(artist);
+      // Super-admins list all; others query by array-contains on their email.
+      allow list: if isSuperAdmin()
+        || (signedIn() && (email() in resource.data.admins || email() in resource.data.editors));
+
+      // The id becomes the site's ARTIST_ID and a Pages project name.
+      allow create: if isSuperAdmin()
+        && artist.matches("^[a-z0-9][a-z0-9-]{1,39}$")
+        && validArtist(request.resource.data);
+
+      // Artist admins may change everything except who the admins are.
+      allow update: if validArtist(request.resource.data)
+        && (isSuperAdmin()
+            || (isArtistAdmin(artist) && request.resource.data.admins == resource.data.admins));
+
+      // Deactivate instead: deleting the document would orphan its subcollections.
+      allow delete: if false;
+    }
+
+    function validWerkgruppe(d) {
+      return d.keys().hasOnly(["titel", "kurztitel", "reihenfolge", "cover"])
+        && d.titel is string && d.titel.size() > 0
+        && (d.get("kurztitel", null) == null || d.kurztitel is string)
+        && d.reihenfolge is int
+        && (d.get("cover", null) == null || d.cover is string);
     }
 
     match /artists/{artist}/werkgruppen/{werkgruppe} {
       allow read: if isEditor(artist);
+      allow create: if isArtistAdmin(artist)
+        && werkgruppe.matches("^[a-z0-9][a-z0-9-]{0,59}$")
+        && validWerkgruppe(request.resource.data);
+      allow update: if isArtistAdmin(artist) && validWerkgruppe(request.resource.data);
+      // Not yet: its works would be left without a Werkgruppe.
+      allow delete: if false;
     }
 
     match /artists/{artist}/works/{work} {
@@ -43,7 +109,7 @@ service cloud.firestore {
     match /artists/{artist}/history/{entry} {
       allow read: if isEditor(artist);
       allow create: if isEditor(artist)
-        && request.resource.data.by == request.auth.token.email
+        && request.resource.data.by == email()
         && request.resource.data.at == request.time
         && request.resource.data.work is string
         && request.resource.data.changes is map;
