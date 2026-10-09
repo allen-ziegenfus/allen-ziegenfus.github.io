@@ -35,6 +35,9 @@ jobs:
       PUBLIC_DRIVE_FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
       PUBLIC_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID }}
       STRICT: '1'
+      # Only the firestore-build branch reads these; elsewhere they are unused.
+      FIRESTORE_PROJECT: vollrad-werkverzeichnis
+      FIRESTORE_DATABASE: werkverzeichnis
     steps:
       - uses: actions/checkout@v5
         with:
