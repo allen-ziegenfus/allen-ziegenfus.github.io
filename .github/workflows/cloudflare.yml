@@ -30,6 +30,10 @@ jobs:
       COPYRIGHT_AUTHOR: ${{ vars.COPYRIGHT_AUTHOR }}
       SHEET_ID: ${{ vars.SHEET_ID }}
       DRIVE_FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
+      # The editor at /bearbeiten/ runs in the browser, which only sees PUBLIC_ vars.
+      PUBLIC_SHEET_ID: ${{ vars.SHEET_ID }}
+      PUBLIC_DRIVE_FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
+      PUBLIC_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID }}
       STRICT: '1'
     steps:
       - uses: actions/checkout@v5
