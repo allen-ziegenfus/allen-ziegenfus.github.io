@@ -36,15 +36,18 @@ jobs:
       - name: Checkout your repository using git
         uses: actions/checkout@v5
 
-      # Without this the build re-downloads ~3,100 files and ~810 MB from Drive on
-      # every run — slow, and enough to run into Drive's quota. The rolling key
-      # means each run restores the newest cache and saves an updated one.
-      - name: Restore downloaded originals
-        uses: actions/cache@v4
+      # Drive originals and the converted images, so a run only fetches and
+      # converts what changed. Saved even when the build fails, so its downloads
+      # are not lost. GitHub drops a cache unused for 7 days, so the first run
+      # after a quiet week starts cold — a few minutes, downloads run in parallel.
+      - name: Restore image cache
+        uses: actions/cache/restore@v4
         with:
-          path: .cache/originals
-          key: drive-originals-${{ github.run_id }}
-          restore-keys: drive-originals-
+          path: |
+            .cache/originals
+            public/images
+          key: images-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: images-${{ github.ref_name }}-
 
       # Exchanges the job's OIDC token for a short-lived Google access token and
       # writes it where GoogleAuth will find it. Nothing long-lived is stored.
@@ -61,6 +64,15 @@ jobs:
           path: .
           node-version: 20
           package-manager: yarn
+
+      - name: Save image cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .cache/originals
+            public/images
+          key: images-${{ github.ref_name }}-${{ github.run_id }}
 
   deploy:
     needs: build

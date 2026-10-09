@@ -22,10 +22,12 @@ ROW_SOURCE=csv EXPORT_DIR=../werkverzeichnis-export yarn build
 `public/images/`; `yarn build` runs that and then `astro build` into `dist/`.
 
 Locally, authenticate with `gcloud auth application-default login`. `STRICT=1` turns
-data problems into a failed build instead of a published gap.
+data problems into a failed build instead of a published gap. The checks run before
+any image is fetched, so a data problem fails within a minute.
 
 Drive downloads are cached in `.cache/originals`. A cold build pulls ~3,100 files and
-~810 MB, so keep that directory between runs.
+~810 MB, 8 at a time (`IMAGE_CONCURRENCY`), so keep that directory and `public/images`
+between runs; CI caches both.
 
 ## Deploying
 
