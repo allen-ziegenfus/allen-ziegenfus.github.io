@@ -31,7 +31,7 @@ Drive downloads are cached in `.cache/originals`. A cold build pulls ~3,100 file
 
 Two targets, both from GitHub Actions.
 
-**GitHub Pages** — `.github/workflows/deploy.yml`, on push to `master` plus a nightly
+**GitHub Pages** — `.github/workflows/deploy.yml`, on push to `master` plus a weekly (Monday)
 cron. This is production and it uses the `SITE` repo variable.
 
 **Cloudflare Pages** — `.github/workflows/cloudflare.yml`, manual dispatch only. It

@@ -4,7 +4,7 @@ on:
   push:
     branches: [ master ]
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * 1'   # Mondays 00:00 UTC
   # Allows you to run this workflow manually from the Actions tab on GitHub.
   workflow_dispatch:
 
