@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// Firestore test (FIRESTORE.md). The build reads with a service account, which
+// bypasses these rules; they govern the browser editor only.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function artistDoc(artist) {
+      return get(/databases/$(database)/documents/artists/$(artist));
+    }
+
+    // Signed in with a verified Google email that the artist lists as editor.
+    function isEditor(artist) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in artistDoc(artist).data.editors;
+    }
+
+    // The editors list itself is only changed with admin credentials.
+    match /artists/{artist} {
+      allow read: if isEditor(artist);
+    }
+
+    match /artists/{artist}/werkgruppen/{werkgruppe} {
+      allow read: if isEditor(artist);
+    }
+
+    match /artists/{artist}/works/{work} {
+      allow read: if isEditor(artist);
+
+      // Edit only (no create/delete in the test). The Inv. Nr. and Werkgruppe
+      // are fixed, the timestamp is the server's, and the same write must add the
+      // history entry that `lastChange` points to — so no edit goes unrecorded.
+      allow update: if isEditor(artist)
+        && request.resource.data.InvNr == resource.data.InvNr
+        && request.resource.data.werkgruppe == resource.data.werkgruppe
+        && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/artists/$(artist)/history/$(request.resource.data.lastChange)).data.work == work
+        && !exists(/databases/$(database)/documents/artists/$(artist)/history/$(request.resource.data.lastChange));
+    }
+
+    // Append-only change log: who, when, which work. Never edited or deleted.
+    match /artists/{artist}/history/{entry} {
+      allow read: if isEditor(artist);
+      allow create: if isEditor(artist)
+        && request.resource.data.by == request.auth.token.email
+        && request.resource.data.at == request.time
+        && request.resource.data.work is string
+        && request.resource.data.changes is map;
+    }
+  }
+}
