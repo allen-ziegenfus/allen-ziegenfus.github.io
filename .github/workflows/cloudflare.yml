@@ -40,14 +40,18 @@ jobs:
         with:
           ref: ${{ inputs.source_ref }}
 
-      # A cold build pulls ~3,100 files and ~810 MB out of Drive. The rolling key
-      # restores the newest cache and saves an updated one.
-      - name: Restore downloaded originals
-        uses: actions/cache@v4
+      # Drive originals and the converted images, so a run only fetches and
+      # converts what changed. Saved even when the build fails, so its downloads
+      # are not lost. GitHub drops a cache unused for 7 days, so the first run
+      # after a quiet week starts cold — a few minutes, downloads run in parallel.
+      - name: Restore image cache
+        uses: actions/cache/restore@v4
         with:
-          path: .cache/originals
-          key: drive-originals-${{ github.run_id }}
-          restore-keys: drive-originals-
+          path: |
+            .cache/originals
+            public/images
+          key: images-${{ inputs.source_ref }}-${{ github.run_id }}
+          restore-keys: images-${{ inputs.source_ref }}-
 
       # Exchanges this job's OIDC token for a short-lived Google access token.
       # Nothing long-lived is stored; the provider is pinned to this repository.
@@ -66,6 +70,15 @@ jobs:
 
       # Reads the Sheet and Drive, then renders to dist/.
       - run: yarn build
+
+      - name: Save image cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .cache/originals
+            public/images
+          key: images-${{ inputs.source_ref }}-${{ github.run_id }}
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
