@@ -80,6 +80,7 @@ Variables (`gh variable list`):
 | `SITE`, `WEBSITE_TITLE`, `WEBSITE_TITLE_MOBILE_LINE_1/2`, `COPYRIGHT_AUTHOR` | site chrome |
 | `SHEET_ID`, `DRIVE_FOLDER_ID` | where the data is |
 | `PROJECT_NUMBER`, `SA` | keyless Google auth, see runbook §7–8 |
+| `OAUTH_CLIENT_ID` | Google sign-in for the editor at `/bearbeiten/` (public by design) |
 | `CLOUDFLARE_PROJECT_NAME` | which Pages project to deploy to |
 
 Secrets (`gh secret list`): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
