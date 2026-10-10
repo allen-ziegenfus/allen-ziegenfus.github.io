@@ -1,26 +1,25 @@
 ---
 import Bild from "./Bild.astro";
 export interface Props {
-  title: string;
-  body: string;
+  titel: string;
+  text: string;
   href: string;
   bild: { src: string; [key: string]: unknown };
 }
 
-const { href, title, body, bild } = Astro.props;
+const { href, titel, text, bild } = Astro.props;
 ---
 
 <li class="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600">
   <a class="flex flex-col" href={href}>
 
-    <!-- The grid: 1 column on phones, 2 from md, 4 from lg. -->
-    <Bild bild={bild} alt={title} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw" />
+    <!-- Das Raster: 1 Spalte auf Telefonen, 2 ab md, 4 ab lg. -->
+    <Bild bild={bild} alt={titel} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw" />
     <h2 class="pt-2">
-      {title}
+      {titel}
     </h2>
     <p>
-      {body}
+      {text}
     </p>
   </a>
 </li>
-

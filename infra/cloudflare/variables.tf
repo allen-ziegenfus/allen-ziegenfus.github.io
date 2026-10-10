@@ -1,21 +1,21 @@
-variable "infra_project" {
-  description = "Project holding the Cloudflare Terraform token."
+variable "infra_projekt" {
+  description = "Projekt mit dem Cloudflare-Token für Terraform."
   type        = string
 }
 
-variable "account_id" {
+variable "konto_id" {
   type = string
 }
 
-variable "pages_project" {
+variable "pages_projekt" {
   type = string
 }
 
-variable "production_branch" {
+variable "produktions_branch" {
   type = string
 }
 
 variable "bilder_bucket" {
-  description = "R2 bucket for the web versions, bound to the site as BILDER (functions/bilder)."
+  description = "R2-Bucket für die Webversionen, an die Seite gebunden als BILDER (functions/bilder)."
   type        = string
 }

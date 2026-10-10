@@ -1,11 +1,11 @@
 ---
-import site from "../../public/site.json";
+import einstellungen from "../../public/site.json";
 import Layout from "../layouts/Layout.astro";
 import Card from "../components/Card.astro";
 import werkgruppen from "../../public/werkgruppen.json";
 ---
 
-<Layout title={site.websiteTitel} image={werkgruppen[0].Thumbnail}>
+<Layout titel={einstellungen.websiteTitel} bild={werkgruppen[0].Thumbnail}>
   <main>
     <nav class="print:hidden">
       <ul class="m-2 flex flex-row">
@@ -18,8 +18,8 @@ import werkgruppen from "../../public/werkgruppen.json";
           <ul>
             <Card
               href={werkgruppe.Slug}
-              title={werkgruppe.Titel + " (" + werkgruppe.Count + ")"}
-              body=""
+              titel={werkgruppe.Titel + " (" + werkgruppe.Count + ")"}
+              text=""
               bild={werkgruppe.Titelbild}
             />
           </ul>

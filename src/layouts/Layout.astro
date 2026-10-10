@@ -1,9 +1,9 @@
 ---
-import site from "../../public/site.json";
-import SearchBar from "../components/SearchBar.jsx";
-import SearchIcon from "../components/SearchIcon.jsx";
+import einstellungen from "../../public/site.json";
+import Suche from "../components/SearchBar.jsx";
+import SuchSymbol from "../components/SearchIcon.jsx";
 import werkgruppen from "../../public/werkgruppen.json";
-import pages from "../../public/pages.json";
+import seiten from "../../public/pages.json";
 import {
   Astronav,
   MenuItems,
@@ -13,20 +13,20 @@ import {
   DropdownSubmenu,
 } from "astro-navbar";
 export interface Props {
-  title: string;
-  description?: string;
-  image?: string;
-  noindex?: boolean;
+  titel: string;
+  beschreibung?: string;
+  bild?: string;
+  keinIndex?: boolean;
 }
 
-const footerPages = pages.filter((page) => page.Kategorie === "Footer");
-const headerPages = pages.filter((page) => page.Kategorie === "Header");
-const year = new Date().getFullYear();
-const { title, description, image, noindex } = Astro.props;
+const fussSeiten = seiten.filter((seite) => seite.Kategorie === "Footer");
+const kopfSeiten = seiten.filter((seite) => seite.Kategorie === "Header");
+const jahr = new Date().getFullYear();
+const { titel, beschreibung, bild, keinIndex } = Astro.props;
 
-const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-const domain = canonicalURL.host;
-const socialImageURL = new URL(image, canonicalURL);
+const kanonischeUrl = new URL(Astro.url.pathname, Astro.site);
+const domain = kanonischeUrl.host;
+const vorschauBildUrl = new URL(bild, kanonischeUrl);
 ---
 
 <!DOCTYPE html>
@@ -37,48 +37,48 @@ const socialImageURL = new URL(image, canonicalURL);
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <meta name="generator" content={Astro.generator} />
-    {noindex && <meta name="robots" content="noindex" />}
+    {keinIndex && <meta name="robots" content="noindex" />}
 
-    <meta property="og:url" content={canonicalURL} />
-    <meta property="twitter:url" content={canonicalURL} />
+    <meta property="og:url" content={kanonischeUrl} />
+    <meta property="twitter:url" content={kanonischeUrl} />
     <meta property="twitter:domain" content={domain} />
 
     <meta property="og:type" content="website" />
-    <title>{title}</title>
-    <meta property="og:title" content={title} />
-    <meta property="twitter:title" content={title} />
+    <title>{titel}</title>
+    <meta property="og:title" content={titel} />
+    <meta property="twitter:title" content={titel} />
 
     {
-      description && (
+      beschreibung && (
         <>
-          <meta name="description" content={description} />
-          <meta property="og:description" content={description} />
-          <meta property="twitter:description" content={description} />
+          <meta name="description" content={beschreibung} />
+          <meta property="og:description" content={beschreibung} />
+          <meta property="twitter:description" content={beschreibung} />
         </>
       )
     }
     {
-      image && (
+      bild && (
         <>
           <meta name="twitter:card" content="summary_large_image" />
-          <meta property="og:image" content={socialImageURL} />
-          <meta name="twitter:image" content={socialImageURL} />
+          <meta property="og:image" content={vorschauBildUrl} />
+          <meta name="twitter:image" content={vorschauBildUrl} />
         </>
       )
     }
   </head>
   <body class="max-w-6xl m-auto p-4 md:p-6 relative">
-    <SearchBar client:only />
+    <Suche client:only />
     <header class="sticky bg-white top-0 print:static">
       <div
         class="flex justify-center text-center py-2 md:py-5 relative items-center"
       >
         <a class="flex-grow" href="/"
           ><h1 class="text-lg md:text-2xl lg:hidden print:hidden">
-            {site.titelZeile1} <br/> {site.titelZeile2}
+            {einstellungen.titelZeile1} <br/> {einstellungen.titelZeile2}
           </h1>
           <h1 class="text-lg md:text-2xl hidden lg:block print:block">
-            {site.websiteTitel}
+            {einstellungen.websiteTitel}
           </h1></a
         >
         <div class="lg:hidden ml-2 print:hidden">
@@ -113,15 +113,15 @@ const socialImageURL = new URL(image, canonicalURL);
                 <div class="">
                   <ul>
                     {
-                      headerPages.map((page) => (
+                      kopfSeiten.map((seite) => (
                         <li class="py-2">
                           <a
                             class="px-3 py-1 hover:bg-gray-800 hover:text-white cursor-pointer"
-                            href={`/allgemein/${page.Slug}`}
+                            href={`/allgemein/${seite.Slug}`}
                           >
                             {" "}
                             &gt;
-                            {page.Name}
+                            {seite.Name}
                           </a>
                         </li>
                       ))
@@ -168,7 +168,7 @@ const socialImageURL = new URL(image, canonicalURL);
             </Dropdown>
             <div class="m-3 flex justify-center">
               <div class="m-3 w-7 h-7 flex print:hidden">
-                <SearchIcon client:only />
+                <SuchSymbol client:only />
               </div>
               <div style="" class="m-3 w-7 h-7">
                 <a href="javascript:window.print()">
@@ -228,13 +228,13 @@ const socialImageURL = new URL(image, canonicalURL);
                   <div class="">
                     <ul>
                       {
-                        headerPages.map((page) => (
+                        kopfSeiten.map((seite) => (
                           <li class="py-2 m-3">
                             <a
                               class="px-3 py-1 hover:bg-gray-800 hover:text-white cursor-pointer"
-                              href={`/allgemein/${page.Slug}`}
+                              href={`/allgemein/${seite.Slug}`}
                             >
-                              {page.Name}
+                              {seite.Name}
                             </a>
                           </li>
                         ))
@@ -286,7 +286,7 @@ const socialImageURL = new URL(image, canonicalURL);
               </Dropdown>
               <div class="m-3 flex absolute right-0">
                 <div class="m-3 w-7 h-7 flex print:hidden">
-                  <SearchIcon client:only />
+                  <SuchSymbol client:only />
                 </div>
                 <div style="" class="m-3 w-7 h-7">
                   <a href="javascript:window.print()">
@@ -326,20 +326,20 @@ const socialImageURL = new URL(image, canonicalURL);
           class="flex flex-row flex-wrap bg-gray-200 py-4 px-2 my-3 justify-center print:hidden"
         >
           {
-            footerPages.map((page) => (
+            fussSeiten.map((seite) => (
               <li>
                 <a
                   class="px-3 py-2 hover:bg-gray-800 hover:text-white cursor-pointer"
-                  href={`/allgemein/${page.Slug}`}
+                  href={`/allgemein/${seite.Slug}`}
                 >
-                  {page.Name}
+                  {seite.Name}
                 </a>
               </li>
             ))
           }
         </ul>
         <p>
-          Copyright © {year} {site.copyright}
+          Copyright © {jahr} {einstellungen.copyright}
           <a class="ml-3 text-sm text-gray-400 hover:text-gray-600 print:hidden"
              href="/firestore-test/admin/" rel="nofollow">Anmelden</a>
         </p>

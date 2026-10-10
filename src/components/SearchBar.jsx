@@ -1,4 +1,4 @@
-import { React, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Document from "flexsearch/src/document";
 import { filter, stemmer } from "flexsearch/src/lang/de";
 import { Slider } from "@radix-ui/themes";
@@ -6,27 +6,27 @@ import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import Select from "react-select";
 
-export default function SearchBar({}) {
-  const urlParams = new URLSearchParams(window.location.search);
-  const search = urlParams.get("search");
-  const DELTA = 24;
+/** Die Suche über alle Werke, als Überlagerung; geöffnet über das Ereignis "openSearch". */
+export default function Suche() {
+  const parameter = new URLSearchParams(window.location.search);
+  const suche = parameter.get("search");
+  const JE_SEITE = 24;
 
-  const [searchInput, setSearchInput] = useState(search || "");
-  const [displayRows, setDisplayRows] = useState([]);
-  const [yearRange, setYearRange] = useState([0, 0]);
-  const [records, setRecords] = useState([]);
-  const [selectedYearRange, setSelectedYearRange] = useState([0, 0]);
-  const [fetched, setFetched] = useState(false);
+  const [suchbegriff, setSuchbegriff] = useState(suche || "");
+  const [zeilen, setZeilen] = useState([]);
+  const [jahresSpanne, setJahresSpanne] = useState([0, 0]);
+  const [eintraege, setEintraege] = useState([]);
+  const [gewaehlteJahre, setGewaehlteJahre] = useState([0, 0]);
+  const [geladen, setGeladen] = useState(false);
   const [bildVorhanden, setBildVorhanden] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [offen, setOffen] = useState(false);
   const [werkgruppen, setWerkgruppen] = useState([]);
-  const [selectedWerkgruppe, setSelectedWerkgruppe] = useState();
-  const [invNrs, setInvNrs] = useState([]);
-  const [page, setPage] = useState(0);
+  const [gewaehlteWerkgruppe, setGewaehlteWerkgruppe] = useState();
+  const [seite, setSeite] = useState(0);
   const [index, setIndex] = useState();
-  const [indexedRecords, setIndexedRecords] = useState();
+  const [nachInvNr, setNachInvNr] = useState();
 
-  function createIndex(records) {
+  function indexAnlegen(eintraege) {
     const index = new Document({
       document: {
         id: "InvNr",
@@ -42,160 +42,142 @@ export default function SearchBar({}) {
       stemmer,
     });
 
-    const map = {};
-    records.forEach((record) => {
-      index.add(record);
-      map[record.InvNr] = record;
+    const zuordnung = {};
+    eintraege.forEach((eintrag) => {
+      index.add(eintrag);
+      zuordnung[eintrag.InvNr] = eintrag;
     });
-    return [index, map];
+    return [index, zuordnung];
   }
 
-  function openSearch(e) {
-    setOpen(true);
+  function oeffnen() {
+    setOffen(true);
   }
   useEffect(() => {
-    window.addEventListener("openSearch", openSearch);
+    window.addEventListener("openSearch", oeffnen);
     return () => {
-      window.removeEventListener("openSearch", openSearch);
+      window.removeEventListener("openSearch", oeffnen);
     };
   }, []);
 
   useEffect(() => {
-    if (open) {
+    if (offen) {
       document.body.classList.add("overflow-hidden");
     } else {
       document.body.classList.remove("overflow-hidden");
     }
-  }, [open]);
+  }, [offen]);
 
   useEffect(() => {
-    async function fetchRecords() {
+    async function eintraegeLaden() {
       try {
-        const searchDataResponse = await fetch("/searchData.json");
-        const searchData = await searchDataResponse.json();
-        setRecords(searchData);
-        const searchMetadataResponse = await fetch("/searchMetadata.json");
-        const searchMetadata = await searchMetadataResponse.json();
-        setYearRange([
-          Number(searchMetadata.MinYear),
-          Number(searchMetadata.MaxYear),
+        const suchDaten = await (await fetch("/searchData.json")).json();
+        setEintraege(suchDaten);
+        const suchMetadaten = await (await fetch("/searchMetadata.json")).json();
+        setJahresSpanne([
+          Number(suchMetadaten.MinYear),
+          Number(suchMetadaten.MaxYear),
         ]);
-        setSelectedYearRange([
-          Number(searchMetadata.MinYear),
-          Number(searchMetadata.MaxYear),
+        setGewaehlteJahre([
+          Number(suchMetadaten.MinYear),
+          Number(suchMetadaten.MaxYear),
         ]);
-        const options = [];
-        const all = { value: "all", label: "Alle" };
-        options.push(all);
-        options.push(
-          ...searchMetadata.Werkgruppen.map((werkgruppe) => ({
+        const alle = { value: "all", label: "Alle" };
+        setWerkgruppen([
+          alle,
+          ...suchMetadaten.Werkgruppen.map((werkgruppe) => ({
             value: werkgruppe.WerkgruppenSlug,
             label: werkgruppe.WerkgruppenTitel,
-          }))
-        );
+          })),
+        ]);
+        setGewaehlteWerkgruppe(alle);
+        setGeladen(true);
 
-        setWerkgruppen(options);
-        setSelectedWerkgruppe(all);
-        setFetched(true);
-        setInvNrs(searchMetadata.InvNrs);
-
-        const [index, map] = createIndex(searchData);
+        const [index, zuordnung] = indexAnlegen(suchDaten);
         setIndex(index);
-        setIndexedRecords(map);
-      } catch (error) {
-        console.log(error);
+        setNachInvNr(zuordnung);
+      } catch (fehler) {
+        console.log(fehler);
       }
     }
-    fetchRecords();
+    eintraegeLaden();
   }, []);
 
   useEffect(() => {
     try {
-      const sessionSelectedYearRange = JSON.parse(
-        sessionStorage.getItem("selectedYearRange")
-      );
-      if (sessionSelectedYearRange)
-        setSelectedYearRange(sessionSelectedYearRange);
-      const sessionSelectedWerkgruppe = JSON.parse(
-        sessionStorage.getItem("selectedWerkgruppe")
-      );
-      if (sessionSelectedWerkgruppe)
-        setSelectedWerkgruppe(sessionSelectedWerkgruppe);
-      const sessionBildVorhanden = sessionStorage.getItem("bildVorhanden");
-      if (sessionBildVorhanden) {
-        setBildVorhanden(sessionBildVorhanden === "true");
+      const jahre = JSON.parse(sessionStorage.getItem("gewaehlteJahre"));
+      if (jahre) setGewaehlteJahre(jahre);
+      const werkgruppe = JSON.parse(sessionStorage.getItem("gewaehlteWerkgruppe"));
+      if (werkgruppe) setGewaehlteWerkgruppe(werkgruppe);
+      const bild = sessionStorage.getItem("bildVorhanden");
+      if (bild) {
+        setBildVorhanden(bild === "true");
       }
-    } catch (error) {
+    } catch (fehler) {
       sessionStorage.clear();
     }
-  }, [fetched, open]);
+  }, [geladen, offen]);
+
   useEffect(() => {
-    if (!fetched) return;
-    const [minYear, maxYear] = selectedYearRange;
-    const filteredRecords = records.filter(
-      (record) =>
-        (record.Jahre.length == 0 ||
-          record.Jahre.filter((jahr) => jahr >= minYear && jahr <= maxYear)
+    if (!geladen) return;
+    const [vonJahr, bisJahr] = gewaehlteJahre;
+    const gefiltert = eintraege.filter(
+      (eintrag) =>
+        (eintrag.Jahre.length == 0 ||
+          eintrag.Jahre.filter((jahr) => jahr >= vonJahr && jahr <= bisJahr)
             .length > 0) &&
-        (bildVorhanden ? !record.Thumbnail.includes("placeholder") : true) &&
-        (selectedWerkgruppe.value == "all" ||
-          selectedWerkgruppe.value == record.WerkgruppeSlug)
+        (bildVorhanden ? !eintrag.Thumbnail.includes("placeholder") : true) &&
+        (gewaehlteWerkgruppe.value == "all" ||
+          gewaehlteWerkgruppe.value == eintrag.WerkgruppeSlug)
     );
 
-    let recordsToShow = filteredRecords;
-    recordsToShow.sort((a, b) => Number(a.Jahr) > Number(b.Jahr));
-    if (searchInput && index) {
-      const [filteredIndex] = createIndex(filteredRecords);
-      const searchResults = filteredIndex.search(searchInput, { enrich: true });
+    let anzuzeigen = gefiltert;
+    anzuzeigen.sort((a, b) => Number(a.Jahr) > Number(b.Jahr));
+    if (suchbegriff && index) {
+      const [gefilterterIndex] = indexAnlegen(gefiltert);
+      const ergebnisse = gefilterterIndex.search(suchbegriff, { enrich: true });
 
-      const rank = { InvNr: 0, Titel: 1, Beschreibung: 2 };
+      const rang = { InvNr: 0, Titel: 1, Beschreibung: 2 };
 
-      if (searchResults) {
-        searchResults.sort((a, b) => {
-          rank[a.field] - rank[b.field];
+      if (ergebnisse) {
+        ergebnisse.sort((a, b) => {
+          rang[a.field] - rang[b.field];
         });
-        const rankedResults = [];
-        searchResults.forEach((result) => rankedResults.push(...result.result));
-        const uniqueRankedResults = rankedResults.filter(function (item, pos) {
-          return rankedResults.indexOf(item) == pos;
-        });
-        recordsToShow = uniqueRankedResults.map(
-          (InvNr) => indexedRecords[InvNr]
-        );
+        const sortiert = [];
+        ergebnisse.forEach((ergebnis) => sortiert.push(...ergebnis.result));
+        const eindeutig = sortiert.filter((invNr, pos) => sortiert.indexOf(invNr) == pos);
+        anzuzeigen = eindeutig.map((invNr) => nachInvNr[invNr]);
       }
     }
 
-    setPage(0);
-    setDisplayRows(
-      recordsToShow.map((record) => ({
-        Titel: record.Titel,
-        Slug: `/${record.WerkgruppeSlug}/${record.Slug}`,
-        Thumbnail: record.Thumbnail,
-        InvNr: record.InvNr,
+    setSeite(0);
+    setZeilen(
+      anzuzeigen.map((eintrag) => ({
+        Titel: eintrag.Titel,
+        Slug: `/${eintrag.WerkgruppeSlug}/${eintrag.Slug}`,
+        Thumbnail: eintrag.Thumbnail,
+        InvNr: eintrag.InvNr,
       }))
     );
   }, [
-    selectedYearRange,
-    records,
+    gewaehlteJahre,
+    eintraege,
     bildVorhanden,
-    searchInput,
-    selectedWerkgruppe,
-    fetched,
+    suchbegriff,
+    gewaehlteWerkgruppe,
+    geladen,
   ]);
 
   return (
-    open &&
-    fetched && (
+    offen &&
+    geladen && (
       <div className="text-white fixed top-0 bottom-0 left-0 right-0 bg-black overflow-scroll z-10">
         <div className="max-w-6xl m-auto">
           <input
             className="text-black flex my-5 mx-auto w-1/2 h-10 rounded-lg p-2"
             placeholder="Suchen"
-            value={searchInput}
-            onChange={(e) => {
-              const searchTerm = e.target.value;
-              setSearchInput(searchTerm);
-            }}
+            value={suchbegriff}
+            onChange={(e) => setSuchbegriff(e.target.value)}
           ></input>
 
           <div className="p-6">
@@ -210,20 +192,17 @@ export default function SearchBar({}) {
                 </style>
                 <Theme>
                   <Slider
-                    defaultValue={selectedYearRange}
-                    min={Number(yearRange[0])}
-                    max={Number(yearRange[1])}
-                    onValueChange={(newYearRange) => {
-                      setSelectedYearRange(newYearRange);
-                      sessionStorage.setItem(
-                        "selectedYearRange",
-                        JSON.stringify(newYearRange)
-                      );
+                    defaultValue={gewaehlteJahre}
+                    min={Number(jahresSpanne[0])}
+                    max={Number(jahresSpanne[1])}
+                    onValueChange={(neueJahre) => {
+                      setGewaehlteJahre(neueJahre);
+                      sessionStorage.setItem("gewaehlteJahre", JSON.stringify(neueJahre));
                     }}
                   ></Slider>
                 </Theme>
                 <div className="text-white text-center">
-                  {selectedYearRange[0]} - {selectedYearRange[1]}
+                  {gewaehlteJahre[0]} - {gewaehlteJahre[1]}
                 </div>
               </div>
 
@@ -234,14 +213,11 @@ export default function SearchBar({}) {
                     <Select
                       className="m-1 w-full"
                       onChange={(option) => {
-                        setSelectedWerkgruppe(option);
-                        sessionStorage.setItem(
-                          "selectedWerkgruppe",
-                          JSON.stringify(option)
-                        );
+                        setGewaehlteWerkgruppe(option);
+                        sessionStorage.setItem("gewaehlteWerkgruppe", JSON.stringify(option));
                       }}
                       options={werkgruppen}
-                      defaultValue={selectedWerkgruppe}
+                      defaultValue={gewaehlteWerkgruppe}
                     />
                   )}
                 </div>
@@ -250,12 +226,9 @@ export default function SearchBar({}) {
                     type="checkbox"
                     id="bildvorhanden"
                     checked={bildVorhanden}
-                    onChange={(val) => {
-                      setBildVorhanden(val.target.checked);
-                      sessionStorage.setItem(
-                        "bildVorhanden",
-                        val.target.checked
-                      );
+                    onChange={(e) => {
+                      setBildVorhanden(e.target.checked);
+                      sessionStorage.setItem("bildVorhanden", e.target.checked);
                     }}
                   />
                   <label className="ml-2" htmlFor="bildvorhanden">
@@ -268,10 +241,10 @@ export default function SearchBar({}) {
 
           <div className="text-center text-white">
             <h2>
-              Ergebnisse {searchInput && <>für {searchInput}</>} von{" "}
-              {selectedYearRange[0]} - {selectedYearRange[1]}{" "}
-              {selectedWerkgruppe.value != "all" && (
-                <span>in Werkgruppe {selectedWerkgruppe.label}</span>
+              Ergebnisse {suchbegriff && <>für {suchbegriff}</>} von{" "}
+              {gewaehlteJahre[0]} - {gewaehlteJahre[1]}{" "}
+              {gewaehlteWerkgruppe.value != "all" && (
+                <span>in Werkgruppe {gewaehlteWerkgruppe.label}</span>
               )}
               {bildVorhanden && <>&nbsp;wo Bilder vorhanden sind</>}
             </h2>
@@ -281,23 +254,23 @@ export default function SearchBar({}) {
             <a
               className="cursor-pointer text-2xl"
               onClick={() => {
-                if (page > 0) {
-                  setPage(page - 1);
+                if (seite > 0) {
+                  setSeite(seite - 1);
                 }
               }}
             >
               &lt;
             </a>
             <div class="text-center">
-              {Math.min(page * DELTA + 1, displayRows.length)} -{" "}
-              {Math.min(page * DELTA + DELTA, displayRows.length)} von{" "}
-              {displayRows.length} werden angezeigt
+              {Math.min(seite * JE_SEITE + 1, zeilen.length)} -{" "}
+              {Math.min(seite * JE_SEITE + JE_SEITE, zeilen.length)} von{" "}
+              {zeilen.length} werden angezeigt
             </div>
             <a
               className="cursor-pointer text-2xl"
               onClick={() => {
-                if (page + 1 < Math.ceil(displayRows.length / DELTA)) {
-                  setPage(page + 1);
+                if (seite + 1 < Math.ceil(zeilen.length / JE_SEITE)) {
+                  setSeite(seite + 1);
                 }
               }}
             >
@@ -305,33 +278,33 @@ export default function SearchBar({}) {
             </a>
           </div>
           <div className="container text-white p-6 grid grid-cols-2 lg:grid-cols-4 gap-4 ">
-            {displayRows.length > 0 &&
-              displayRows
-                .slice(page * DELTA, page * DELTA + DELTA)
-                .map((row) => (
+            {zeilen.length > 0 &&
+              zeilen
+                .slice(seite * JE_SEITE, seite * JE_SEITE + JE_SEITE)
+                .map((zeile) => (
                   <li
-                    key={row.InvNr}
+                    key={zeile.InvNr}
                     className="list-none border-2 rounded-lg p-3 text-center hover:border-gray-600"
                   >
                     <a
                       className="flex flex-col"
-                      href={`${row.Slug}/?search=${searchInput}`}
+                      href={`${zeile.Slug}/?search=${suchbegriff}`}
                     >
-                      <img src={row.Thumbnail} alt={row.Titel} />
+                      <img src={zeile.Thumbnail} alt={zeile.Titel} />
                       <h2
                         className="pt-2 break-words md:break-normal"
                         style={{ hyphens: "auto" }}
                       >
-                        {row.Titel}
+                        {zeile.Titel}
                       </h2>
-                      <h3 className="pt-2">{row.InvNr}</h3>
+                      <h3 className="pt-2">{zeile.InvNr}</h3>
                     </a>
                   </li>
                 ))}
           </div>
         </div>
         <button
-          onClick={() => setOpen(false)}
+          onClick={() => setOffen(false)}
           className="absolute right-0 top-0 text-white m-5 text-2xl"
         >
           X

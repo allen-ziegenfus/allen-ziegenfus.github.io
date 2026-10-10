@@ -1,27 +1,28 @@
-# One site's Cloudflare side: the Pages project the builds deploy to (direct
-# upload, no Git connection) and the R2 bucket its /bilder function serves.
+# Die Cloudflare-Seite einer Seite: das Pages-Projekt, auf das die Builds
+# deployen (Direct Upload, ohne Git-Verbindung), und der R2-Bucket, den seine
+# Funktion /bilder ausliefert.
 
 resource "cloudflare_r2_bucket" "bilder" {
-  account_id = var.account_id
+  account_id = var.konto_id
   name       = var.bilder_bucket
   lifecycle { prevent_destroy = true }
 }
 
 locals {
-  bindings = { r2_buckets = { BILDER = { name = cloudflare_r2_bucket.bilder.name } } }
+  bindungen = { r2_buckets = { BILDER = { name = cloudflare_r2_bucket.bilder.name } } }
 }
 
-resource "cloudflare_pages_project" "site" {
-  account_id        = var.account_id
-  name              = var.pages_project
-  production_branch = var.production_branch
+resource "cloudflare_pages_project" "seite" {
+  account_id        = var.konto_id
+  name              = var.pages_projekt
+  production_branch = var.produktions_branch
   deployment_configs = {
-    production = local.bindings
-    preview    = local.bindings
+    production = local.bindungen
+    preview    = local.bindungen
   }
   lifecycle { prevent_destroy = true }
 }
 
 output "pages_subdomain" {
-  value = cloudflare_pages_project.site.subdomain
+  value = cloudflare_pages_project.seite.subdomain
 }

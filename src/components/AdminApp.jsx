@@ -4,70 +4,70 @@ import {
   collection, doc, FieldPath, getDocs, query, runTransaction, serverTimestamp, setDoc, updateDoc, where,
 } from "firebase/firestore";
 import { slugify } from "../werkverzeichnis/slugify";
-import { can, ROLE_LABELS, ROLES } from "../werkverzeichnis/permissions.js";
+import { darf, ROLLEN_NAMEN, ROLLEN } from "../werkverzeichnis/permissions.js";
 import { auth, db } from "./firebaseClient.js";
 import Seiten from "./Seiten.jsx";
 import Veroeffentlichen from "./Veroeffentlichen.jsx";
 
 /**
- * Firestore test (FIRESTORE.md): the multi-tenant admin page. Super-admins
- * create artists; each artist's roles decide the rest (permissions.js).
- * firestore.rules enforces all of it — this page only hides what you couldn't
- * do anyway.
+ * Die Verwaltungsseite für mehrere Künstler:innen. Super-Admins legen
+ * Künstler:innen an; die Rollen je Künstler:in entscheiden den Rest
+ * (permissions.js). firestore.rules setzt alles durch — diese Seite blendet nur
+ * aus, was man ohnehin nicht dürfte.
  */
 
-const SETTINGS = [
+const EINSTELLUNGEN = [
   ["titel", "Name"],
   ["websiteTitel", "Titel der Website"],
   ["titelZeile1", "Titel mobil, Zeile 1"],
   ["titelZeile2", "Titel mobil, Zeile 2"],
   ["copyright", "Copyright"],
 ];
-const EMPTY = { titel: "", websiteTitel: "", titelZeile1: "", titelZeile2: "", copyright: "",
+const LEER = { titel: "", websiteTitel: "", titelZeile1: "", titelZeile2: "", copyright: "",
   roles: {}, active: true };
 
-/** Same pattern as the rules: the id becomes ARTIST_ID and a Pages project name. */
-const toId = (s, max) => slugify(s, { lower: true }).replace(/[^a-z0-9-]/g, "").slice(0, max);
-const isEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-const button = "px-3 py-1 border rounded disabled:opacity-40";
-const permission = e => e.code === "permission-denied" ? "Von den Regeln abgelehnt." : e.message;
+/** Dasselbe Muster wie in den Regeln: Die Kennung wird ARTIST_ID und Name eines Pages-Projekts. */
+const zuKennung = (s, max) => slugify(s, { lower: true }).replace(/[^a-z0-9-]/g, "").slice(0, max);
+const istEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+const knopf = "px-3 py-1 border rounded disabled:opacity-40";
+const meldung = e => e.code === "permission-denied" ? "Von den Regeln abgelehnt." : e.message;
 
-export default function AdminApp() {
-  const [user, setUser] = useState(undefined);  // undefined = still checking
-  const [isSuper, setIsSuper] = useState(false);
-  const [artists, setArtists] = useState();
-  const [open, setOpen] = useState();           // artist id, or "" for a new one
-  const [error, setError] = useState();
+export default function Verwaltung() {
+  const [nutzer, setNutzer] = useState(undefined);  // undefined = wird noch geprüft
+  const [istSuper, setIstSuper] = useState(false);
+  const [kuenstlerListe, setKuenstlerListe] = useState();
+  const [offen, setOffen] = useState();             // Kennung, oder "" für eine neue Künstler:in
+  const [fehler, setFehler] = useState();
 
-  useEffect(() => onAuthStateChanged(auth, setUser), []);
+  useEffect(() => onAuthStateChanged(auth, setNutzer), []);
 
-  async function load(u = user) {
-    setError(undefined);
+  async function laden(n = nutzer) {
+    setFehler(undefined);
     try {
-      // A custom claim in the sign-in token (tools/super_admin.mjs). A change
-      // shows up after signing out and in again.
-      const sup = (await u.getIdTokenResult()).claims.superAdmin === true;
-      setIsSuper(sup);
-      const artistsRef = collection(db, "artists");
-      // FieldPath, because an email's dots would otherwise read as nesting.
-      const snap = await getDocs(sup ? artistsRef
-        : query(artistsRef, where(new FieldPath("roles", u.email), "in", ROLES)));
-      setArtists(snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      // Ein Custom Claim im Anmelde-Token (tools/super_admin.mjs). Eine Änderung
+      // wirkt erst nach Ab- und erneutem Anmelden.
+      const sup = (await n.getIdTokenResult()).claims.superAdmin === true;
+      setIstSuper(sup);
+      const sammlung = collection(db, "artists");
+      // FieldPath, weil die Punkte einer E-Mail-Adresse sonst als Verschachtelung gelten.
+      const snap = await getDocs(sup ? sammlung
+        : query(sammlung, where(new FieldPath("roles", n.email), "in", ROLLEN)));
+      setKuenstlerListe(snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => a.titel.localeCompare(b.titel)));
     } catch (e) {
-      setError(permission(e));
+      setFehler(meldung(e));
     }
   }
 
-  useEffect(() => { if (user) load(user); }, [user]);
+  useEffect(() => { if (nutzer) laden(nutzer); }, [nutzer]);
 
-  if (user === undefined) return <p>…</p>;
+  if (nutzer === undefined) return <p>…</p>;
 
-  if (!user) return (
+  if (!nutzer) return (
     <div className="space-y-2">
-      {error && <p className="text-red-700">{error}</p>}
-      <button className={button} onClick={() =>
-        signInWithPopup(auth, new GoogleAuthProvider()).catch(e => setError(e.message))}>
+      {fehler && <p className="text-red-700">{fehler}</p>}
+      <button className={knopf} onClick={() =>
+        signInWithPopup(auth, new GoogleAuthProvider()).catch(e => setFehler(e.message))}>
         Mit Google anmelden (Firebase)
       </button>
     </div>
@@ -76,214 +76,215 @@ export default function AdminApp() {
   return (
     <div className="space-y-4">
       <p className="text-sm">
-        Angemeldet als {user.email}{isSuper && " (Super-Admin)"} ·{" "}
+        Angemeldet als {nutzer.email}{istSuper && " (Super-Admin)"} ·{" "}
         <button className="underline" onClick={() => signOut(auth)}>Abmelden</button>
       </p>
-      {error && <p className="text-red-700">{error}</p>}
+      {fehler && <p className="text-red-700">{fehler}</p>}
 
-      {open === undefined ? (
+      {offen === undefined ? (
         <>
-          {artists && !artists.length && (
-            <p>Kein Zugriff: {user.email} hat bei keiner Künstler:in eine Rolle.</p>
+          {kuenstlerListe && !kuenstlerListe.length && (
+            <p>Kein Zugriff: {nutzer.email} hat bei keiner Künstler:in eine Rolle.</p>
           )}
           <ul className="divide-y">
-            {(artists ?? []).map(a => (
-              <li key={a.id}>
-                <button className="w-full text-left py-2 hover:bg-gray-100" onClick={() => setOpen(a.id)}>
-                  {a.titel} <span className="font-mono text-sm text-gray-600">{a.id}</span>
-                  {!a.active && <span className="text-sm text-gray-600"> · inaktiv</span>}
+            {(kuenstlerListe ?? []).map(k => (
+              <li key={k.id}>
+                <button className="w-full text-left py-2 hover:bg-gray-100" onClick={() => setOffen(k.id)}>
+                  {k.titel} <span className="font-mono text-sm text-gray-600">{k.id}</span>
+                  {!k.active && <span className="text-sm text-gray-600"> · inaktiv</span>}
                   <span className="text-sm text-gray-600">
-                    {" · "}{isSuper ? "Super-Admin" : ROLE_LABELS[a.roles?.[user.email]]}
-                    {" · "}{Object.keys(a.roles ?? {}).length} Personen
+                    {" · "}{istSuper ? "Super-Admin" : ROLLEN_NAMEN[k.roles?.[nutzer.email]]}
+                    {" · "}{Object.keys(k.roles ?? {}).length} Personen
                   </span>
                 </button>
               </li>
             ))}
           </ul>
-          {isSuper && <button className={button} onClick={() => setOpen("")}>Neue Künstler:in</button>}
+          {istSuper && <button className={knopf} onClick={() => setOffen("")}>Neue Künstler:in</button>}
         </>
       ) : (
-        <Artist id={open} me={user.email} isSuper={isSuper}
-                initial={artists.find(a => a.id === open)}
-                onClose={() => { setOpen(undefined); load(); }} />
+        <Kuenstler id={offen} ich={nutzer.email} istSuper={istSuper}
+                   anfang={kuenstlerListe.find(k => k.id === offen)}
+                   onSchliessen={() => { setOffen(undefined); laden(); }} />
       )}
     </div>
   );
 }
 
-function Artist({ id, me, isSuper, initial, onClose }) {
-  const isNew = id === "";
-  const who = { superAdmin: isSuper, role: initial?.roles?.[me] };
-  const [draft, setDraft] = useState(() => {
-    const { id: _, updatedAt, ...data } = initial ?? EMPTY;
-    return { ...EMPTY, ...data };
+function Kuenstler({ id, ich, istSuper, anfang, onSchliessen }) {
+  const istNeu = id === "";
+  const wer = { superAdmin: istSuper, rolle: anfang?.roles?.[ich] };
+  const [entwurf, setEntwurf] = useState(() => {
+    const { id: _, updatedAt, ...daten } = anfang ?? LEER;
+    return { ...LEER, ...daten };
   });
-  const [newId, setNewId] = useState("");
-  const [idTouched, setIdTouched] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState();
-  const [notice, setNotice] = useState();
+  const [neueKennung, setNeueKennung] = useState("");
+  const [kennungBearbeitet, setKennungBearbeitet] = useState(false);
+  const [speichert, setSpeichert] = useState(false);
+  const [fehler, setFehler] = useState();
+  const [hinweis, setHinweis] = useState();
 
-  const set = (k, v) => {
-    setDraft(d => ({ ...d, [k]: v }));
-    if (isNew && k === "titel" && !idTouched) setNewId(toId(v, 40));
+  const setze = (k, v) => {
+    setEntwurf(e => ({ ...e, [k]: v }));
+    if (istNeu && k === "titel" && !kennungBearbeitet) setNeueKennung(zuKennung(v, 40));
   };
 
-  async function save() {
-    setSaving(true); setError(undefined); setNotice(undefined);
-    const data = { ...draft, updatedAt: serverTimestamp() };
+  async function speichern() {
+    setSpeichert(true); setFehler(undefined); setHinweis(undefined);
+    const daten = { ...entwurf, updatedAt: serverTimestamp() };
     try {
-      if (isNew) {
-        if (!/^[a-z0-9][a-z0-9-]{1,39}$/.test(newId)) throw new Error("Kennung: 2–40 Zeichen, a–z, 0–9 und -.");
-        const ref = doc(db, "artists", newId);
+      if (istNeu) {
+        if (!/^[a-z0-9][a-z0-9-]{1,39}$/.test(neueKennung)) throw new Error("Kennung: 2–40 Zeichen, a–z, 0–9 und -.");
+        const ref = doc(db, "artists", neueKennung);
         await runTransaction(db, async tx => {
-          if ((await tx.get(ref)).exists()) throw new Error(`„${newId}“ gibt es schon.`);
-          tx.set(ref, data);
+          if ((await tx.get(ref)).exists()) throw new Error(`„${neueKennung}“ gibt es schon.`);
+          tx.set(ref, daten);
         });
-        onClose();
+        onSchliessen();
       } else {
-        await setDoc(doc(db, "artists", id), data);
-        setNotice("Gespeichert.");
+        await setDoc(doc(db, "artists", id), daten);
+        setHinweis("Gespeichert.");
       }
     } catch (e) {
-      setError(permission(e));
+      setFehler(meldung(e));
     } finally {
-      setSaving(false);
+      setSpeichert(false);
     }
   }
 
   return (
     <div className="space-y-3">
-      <button className="underline text-sm" onClick={onClose}>← Zurück zur Liste</button>
-      <h2 className="text-xl">{isNew ? "Neue Künstler:in" : draft.titel}</h2>
+      <button className="underline text-sm" onClick={onSchliessen}>← Zurück zur Liste</button>
+      <h2 className="text-xl">{istNeu ? "Neue Künstler:in" : entwurf.titel}</h2>
 
-      {SETTINGS.map(([k, label]) => (
+      {EINSTELLUNGEN.map(([k, beschriftung]) => (
         <label key={k} className="block">
-          <span className="text-sm text-gray-600">{label}</span>
-          <input className="border p-1 w-full disabled:bg-gray-100" value={draft[k]}
-                 disabled={!can(who, "settings.edit")} onChange={e => set(k, e.target.value)} />
+          <span className="text-sm text-gray-600">{beschriftung}</span>
+          <input className="border p-1 w-full disabled:bg-gray-100" value={entwurf[k]}
+                 disabled={!darf(wer, "einstellungen.bearbeiten")} onChange={e => setze(k, e.target.value)} />
         </label>
       ))}
       <label className="block">
         <span className="text-sm text-gray-600">Kennung (ARTIST_ID, nicht änderbar)</span>
-        <input className="border p-1 w-full font-mono disabled:bg-gray-100" disabled={!isNew}
-               value={isNew ? newId : id}
-               onChange={e => { setIdTouched(true); setNewId(e.target.value); }} />
+        <input className="border p-1 w-full font-mono disabled:bg-gray-100" disabled={!istNeu}
+               value={istNeu ? neueKennung : id}
+               onChange={e => { setKennungBearbeitet(true); setNeueKennung(e.target.value); }} />
       </label>
       <label className="flex gap-2 items-center">
-        <input type="checkbox" checked={draft.active} disabled={!can(who, "settings.edit")}
-               onChange={e => set("active", e.target.checked)} />
+        <input type="checkbox" checked={entwurf.active} disabled={!darf(wer, "einstellungen.bearbeiten")}
+               onChange={e => setze("active", e.target.checked)} />
         <span>Aktiv (Website wird gebaut)</span>
       </label>
 
-      <Roles roles={draft.roles} me={isSuper ? null : me} onChange={v => set("roles", v)}
-             readOnly={!can(who, "roles.manage")} />
+      <Rollen rollen={entwurf.roles} ich={istSuper ? null : ich} onAenderung={v => setze("roles", v)}
+              nurLesen={!darf(wer, "rollen.verwalten")} />
 
       <div className="flex gap-2 items-center">
-        <button className={button} onClick={save}
-                disabled={saving || !draft.titel.trim()
-                  || !(can(who, "settings.edit") || can(who, "roles.manage"))}>
-          {saving ? "Speichere…" : isNew ? "Anlegen" : "Speichern"}
+        <button className={knopf} onClick={speichern}
+                disabled={speichert || !entwurf.titel.trim()
+                  || !(darf(wer, "einstellungen.bearbeiten") || darf(wer, "rollen.verwalten"))}>
+          {speichert ? "Speichere…" : istNeu ? "Anlegen" : "Speichern"}
         </button>
-        {notice && <span className="text-green-700 text-sm">{notice}</span>}
-        {error && <span className="text-red-700 text-sm">{error}</span>}
+        {hinweis && <span className="text-green-700 text-sm">{hinweis}</span>}
+        {fehler && <span className="text-red-700 text-sm">{fehler}</span>}
       </div>
 
-      {!isNew && <Veroeffentlichen artistId={id} me={me} allowed={can(who, "publish")} />}
-      {!isNew && <Werkgruppen artistId={id} editable={can(who, "werkgruppen.edit")} />}
-      {!isNew && <Seiten artistId={id} editable={can(who, "seiten.edit")} />}
+      {!istNeu && <Veroeffentlichen kuenstlerId={id} ich={ich} erlaubt={darf(wer, "veroeffentlichen")} />}
+      {!istNeu && <Werkgruppen kuenstlerId={id} bearbeitbar={darf(wer, "werkgruppen.bearbeiten")} />}
+      {!istNeu && <Seiten kuenstlerId={id} bearbeitbar={darf(wer, "seiten.bearbeiten")} />}
     </div>
   );
 }
 
 /**
- * Who has which role for this artist. `me` (null for super-admins) can't change
- * their own entry, so an admin can't lock themselves out by accident.
+ * Wer welche Rolle bei dieser Künstler:in hat. `ich` (null bei Super-Admins)
+ * kann den eigenen Eintrag nicht ändern, damit sich ein Admin nicht versehentlich
+ * aussperrt.
  */
-function Roles({ roles, me, onChange, readOnly }) {
-  const [input, setInput] = useState("");
-  const [role, setRole] = useState("editor");
-  const email = input.trim().toLowerCase();
-  const valid = isEmail(email) && !(email in roles);
-  const add = () => { if (valid) { onChange({ ...roles, [email]: role }); setInput(""); } };
-  const without = e => Object.fromEntries(Object.entries(roles).filter(([k]) => k !== e));
-  const select = "border p-1 disabled:bg-gray-100";
+function Rollen({ rollen, ich, onAenderung, nurLesen }) {
+  const [eingabe, setEingabe] = useState("");
+  const [rolle, setRolle] = useState("editor");
+  const email = eingabe.trim().toLowerCase();
+  const gueltig = istEmail(email) && !(email in rollen);
+  const hinzufuegen = () => { if (gueltig) { onAenderung({ ...rollen, [email]: rolle }); setEingabe(""); } };
+  const ohne = e => Object.fromEntries(Object.entries(rollen).filter(([k]) => k !== e));
+  const auswahl = "border p-1 disabled:bg-gray-100";
 
   return (
     <div>
       <span className="text-sm text-gray-600">Personen und Rollen</span>
       <ul className="text-sm space-y-1">
-        {Object.entries(roles).sort(([a], [b]) => a.localeCompare(b)).map(([e, r]) => (
+        {Object.entries(rollen).sort(([a], [b]) => a.localeCompare(b)).map(([e, r]) => (
           <li key={e} className="flex gap-2 items-center">
             <span className="flex-1">{e}</span>
-            <select className={select} value={r} disabled={readOnly || e === me}
-                    onChange={ev => onChange({ ...roles, [e]: ev.target.value })}>
-              {ROLES.map(x => <option key={x} value={x}>{ROLE_LABELS[x]}</option>)}
+            <select className={auswahl} value={r} disabled={nurLesen || e === ich}
+                    onChange={ev => onAenderung({ ...rollen, [e]: ev.target.value })}>
+              {ROLLEN.map(x => <option key={x} value={x}>{ROLLEN_NAMEN[x]}</option>)}
             </select>
-            {!readOnly && e !== me && (
-              <button className="text-red-700" title="Entfernen" onClick={() => onChange(without(e))}>×</button>
+            {!nurLesen && e !== ich && (
+              <button className="text-red-700" title="Entfernen" onClick={() => onAenderung(ohne(e))}>×</button>
             )}
           </li>
         ))}
-        {!Object.keys(roles).length && <li className="text-gray-600">—</li>}
+        {!Object.keys(rollen).length && <li className="text-gray-600">—</li>}
       </ul>
-      {!readOnly && (
+      {!nurLesen && (
         <div className="flex gap-2 pt-1">
-          <input className="border p-1 flex-1" placeholder="name@gmail.com" value={input}
-                 onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && add()} />
-          <select className={select} value={role} onChange={e => setRole(e.target.value)}>
-            {ROLES.map(x => <option key={x} value={x}>{ROLE_LABELS[x]}</option>)}
+          <input className="border p-1 flex-1" placeholder="name@gmail.com" value={eingabe}
+                 onChange={e => setEingabe(e.target.value)} onKeyDown={e => e.key === "Enter" && hinzufuegen()} />
+          <select className={auswahl} value={rolle} onChange={e => setRolle(e.target.value)}>
+            {ROLLEN.map(x => <option key={x} value={x}>{ROLLEN_NAMEN[x]}</option>)}
           </select>
-          <button className={button} disabled={!valid} onClick={add}>Hinzufügen</button>
+          <button className={knopf} disabled={!gueltig} onClick={hinzufuegen}>Hinzufügen</button>
         </div>
       )}
     </div>
   );
 }
 
-function Werkgruppen({ artistId, editable }) {
-  const [groups, setGroups] = useState();
+function Werkgruppen({ kuenstlerId, bearbeitbar }) {
+  const [gruppen, setGruppen] = useState();
   const [titel, setTitel] = useState("");
-  const [error, setError] = useState();
-  const col = collection(db, "artists", artistId, "werkgruppen");
+  const [fehler, setFehler] = useState();
+  const sammlung = collection(db, "artists", kuenstlerId, "werkgruppen");
 
-  async function load() {
-    const snap = await getDocs(col);
-    setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.reihenfolge - b.reihenfolge));
+  async function laden() {
+    const snap = await getDocs(sammlung);
+    setGruppen(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.reihenfolge - b.reihenfolge));
   }
-  useEffect(() => { load().catch(e => setError(permission(e))); }, [artistId]);
+  useEffect(() => { laden().catch(e => setFehler(meldung(e))); }, [kuenstlerId]);
 
-  async function add() {
-    setError(undefined);
-    const id = toId(titel, 60);
-    const ref = doc(col, id);
-    const reihenfolge = Math.max(0, ...groups.map(g => g.reihenfolge)) + 1;
+  async function hinzufuegen() {
+    setFehler(undefined);
+    const id = zuKennung(titel, 60);
+    const ref = doc(sammlung, id);
+    const reihenfolge = Math.max(0, ...gruppen.map(g => g.reihenfolge)) + 1;
     try {
       await runTransaction(db, async tx => {
         if ((await tx.get(ref)).exists()) throw new Error(`„${id}“ gibt es schon.`);
         tx.set(ref, { titel: titel.trim(), kurztitel: null, reihenfolge });
       });
       setTitel("");
-      await load();
+      await laden();
     } catch (e) {
-      setError(permission(e));
+      setFehler(meldung(e));
     }
   }
 
-  async function update(g, changes) {
-    setError(undefined);
+  async function aendern(g, aenderungen) {
+    setFehler(undefined);
     try {
-      await updateDoc(doc(col, g.id), changes);
-      await load();
+      await updateDoc(doc(sammlung, g.id), aenderungen);
+      await laden();
     } catch (e) {
-      setError(permission(e));
+      setFehler(meldung(e));
     }
   }
 
   return (
     <div className="pt-4 space-y-2">
       <h3 className="text-lg">Werkgruppen</h3>
-      {error && <p className="text-red-700 text-sm">{error}</p>}
+      {fehler && <p className="text-red-700 text-sm">{fehler}</p>}
       <table className="text-sm w-full">
         <thead>
           <tr className="text-left text-gray-600">
@@ -291,35 +292,35 @@ function Werkgruppen({ artistId, editable }) {
           </tr>
         </thead>
         <tbody>
-          {(groups ?? []).map(g => (
+          {(gruppen ?? []).map(g => (
             <tr key={g.id}>
               <td>
-                <input type="number" className="border p-1 w-14 disabled:bg-gray-100" disabled={!editable} defaultValue={g.reihenfolge}
+                <input type="number" className="border p-1 w-14 disabled:bg-gray-100" disabled={!bearbeitbar} defaultValue={g.reihenfolge}
                        onBlur={e => Number(e.target.value) !== g.reihenfolge
-                         && update(g, { reihenfolge: Math.trunc(Number(e.target.value)) })} />
+                         && aendern(g, { reihenfolge: Math.trunc(Number(e.target.value)) })} />
               </td>
               <td>
-                <input className="border p-1 w-full disabled:bg-gray-100" disabled={!editable} defaultValue={g.titel}
+                <input className="border p-1 w-full disabled:bg-gray-100" disabled={!bearbeitbar} defaultValue={g.titel}
                        onBlur={e => e.target.value.trim() && e.target.value !== g.titel
-                         && update(g, { titel: e.target.value.trim() })} />
+                         && aendern(g, { titel: e.target.value.trim() })} />
               </td>
               <td>
-                <input className="border p-1 w-full disabled:bg-gray-100" disabled={!editable} defaultValue={g.kurztitel ?? ""}
+                <input className="border p-1 w-full disabled:bg-gray-100" disabled={!bearbeitbar} defaultValue={g.kurztitel ?? ""}
                        onBlur={e => e.target.value !== (g.kurztitel ?? "")
-                         && update(g, { kurztitel: e.target.value.trim() || null })} />
+                         && aendern(g, { kurztitel: e.target.value.trim() || null })} />
               </td>
               <td className="font-mono text-gray-600">{g.id}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {editable && (
+      {bearbeitbar && (
         <>
           <p className="text-xs text-gray-600">Änderungen werden beim Verlassen des Feldes gespeichert.</p>
           <div className="flex gap-2">
             <input className="border p-1 flex-1" placeholder="Neue Werkgruppe" value={titel}
                    onChange={e => setTitel(e.target.value)} />
-            <button className={button} disabled={!groups || !toId(titel, 60)} onClick={add}>Hinzufügen</button>
+            <button className={knopf} disabled={!gruppen || !zuKennung(titel, 60)} onClick={hinzufuegen}>Hinzufügen</button>
           </div>
         </>
       )}

@@ -1,7 +1,7 @@
-import { setSearchState } from "./SearchNavigation";
-export default function SearchIcon() {
+import { sucheOeffnen } from "./SearchNavigation";
+export default function SuchSymbol() {
   return (
-    <button onClick={() => setSearchState()}>
+    <button onClick={() => sucheOeffnen()}>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         className="icon icon-tabler icon-tabler-search"

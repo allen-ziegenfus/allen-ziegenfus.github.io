@@ -1,23 +1,25 @@
 /**
- * What each role may do. The same table is at the top of firestore.rules, which
- * is what actually enforces it; this copy only decides what the UI shows.
- * tools/rules_test.mjs checks every role × permission against the deployed rules,
- * so the two copies cannot drift apart unnoticed.
+ * Was jede Rolle darf. Dieselbe Tabelle steht oben in firestore.rules, und nur
+ * die setzt sie tatsächlich durch; diese Kopie entscheidet nur, was die
+ * Oberfläche anzeigt. tools/rules_test.mjs prüft jede Rolle × Berechtigung gegen
+ * die Regeln, so dass die beiden Kopien nicht unbemerkt auseinanderlaufen.
  *
- * Who has which role is data, not code: artists/{artist}.roles maps an email to
- * one of these roles. Super-admins (a custom claim, tools/super_admin.mjs) may
- * do everything, for every artist, and create artists.
+ * Wer welche Rolle hat, sind Daten, kein Code: artists/{artist}.roles ordnet
+ * einer E-Mail-Adresse eine dieser Rollen zu. Super-Admins (ein Custom Claim,
+ * tools/super_admin.mjs) dürfen alles, bei allen Künstler:innen, und legen
+ * Künstler:innen an.
  */
-export const PERMISSIONS = {
-  admin: ["read", "works.edit", "werkgruppen.edit", "seiten.edit", "settings.edit", "roles.manage", "publish"],
-  editor: ["read", "works.edit"],
+export const BERECHTIGUNGEN = {
+  admin: ["lesen", "werke.bearbeiten", "werkgruppen.bearbeiten", "seiten.bearbeiten",
+    "einstellungen.bearbeiten", "rollen.verwalten", "veroeffentlichen"],
+  editor: ["lesen", "werke.bearbeiten"],
 };
 
-export const ROLES = Object.keys(PERMISSIONS);
+export const ROLLEN = Object.keys(BERECHTIGUNGEN);
 
-export const ROLE_LABELS = { admin: "Admin", editor: "Bearbeiter:in" };
+export const ROLLEN_NAMEN = { admin: "Admin", editor: "Bearbeiter:in" };
 
-/** `who` is { superAdmin, role } for one artist. */
-export function can(who, permission) {
-  return who.superAdmin === true || (PERMISSIONS[who.role] ?? []).includes(permission);
+/** `wer` ist { superAdmin, rolle } für eine Künstler:in. */
+export function darf(wer, berechtigung) {
+  return wer.superAdmin === true || (BERECHTIGUNGEN[wer.rolle] ?? []).includes(berechtigung);
 }

@@ -1,186 +1,187 @@
 /**
- * Tests firestore.rules with the Firebase Rules API's test endpoint: no emulator
- * (and no Java), no data touched. Lookups (`get`, `exists`, `getAfter`) are
- * mocked per case.
+ * Testet firestore.rules über den Test-Endpunkt der Firebase Rules API: kein
+ * Emulator (und kein Java), keine Daten werden angefasst. Abfragen (`get`,
+ * `exists`, `getAfter`) werden je Fall simuliert.
  *
  *   node tools/rules_test.mjs
  *
- * Two parts:
- *   - the permission matrix, generated from src/werkverzeichnis/permissions.js:
- *     every role (plus super-admin and a stranger) × every permission, so the
- *     rules' table and the UI's table cannot drift apart
- *   - hand-written cases for what the table does not express: validation,
- *     creating artists, other artists, unverified emails
+ * Zwei Teile:
+ *   - die Berechtigungsmatrix, erzeugt aus src/werkverzeichnis/permissions.js:
+ *     jede Rolle (dazu Super-Admin und eine Fremde) × jede Berechtigung, damit
+ *     die Tabelle der Regeln und die der Oberfläche nicht auseinanderlaufen
+ *   - handgeschriebene Fälle für das, was die Tabelle nicht ausdrückt:
+ *     Validierung, Anlegen von Künstler:innen, andere Künstler:innen,
+ *     unbestätigte E-Mail-Adressen
  *
- * Uses your gcloud application-default credentials.
+ * Läuft mit deinen gcloud Application Default Credentials.
  */
 import fs from "fs";
 import { GoogleAuth } from "google-auth-library";
-import { PERMISSIONS, ROLES } from "../src/werkverzeichnis/permissions.js";
+import { BERECHTIGUNGEN, ROLLEN } from "../src/werkverzeichnis/permissions.js";
 
-const PROJECT = process.env.FIRESTORE_PROJECT ?? "vollrad-werkverzeichnis";
-const DB = process.env.FIRESTORE_DATABASE ?? "werkverzeichnis";
-const root = `/databases/${DB}/documents`;
+const PROJEKT = process.env.FIRESTORE_PROJECT ?? "vollrad-werkverzeichnis";
+const DATENBANK = process.env.FIRESTORE_DATABASE ?? "werkverzeichnis";
+const wurzel = `/databases/${DATENBANK}/documents`;
 
-// The test endpoint takes JSON; RFC 3339 strings compare equal to request.time.
-const NOW = "2026-10-09T12:00:00Z";
-const EARLIER = "2026-10-01T00:00:00Z";
+// Der Test-Endpunkt nimmt JSON; RFC-3339-Zeichenketten gelten als gleich request.time.
+const JETZT = "2026-10-09T12:00:00Z";
+const FRUEHER = "2026-10-01T00:00:00Z";
 
-const SUPER = "super@example.org", STRANGER = "stranger@example.org";
-const member = role => `${role}@example.org`;
+const SUPER = "super@example.org", FREMDE = "stranger@example.org";
+const mitglied = rolle => `${rolle}@example.org`;
 
 const kutscher = {
   titel: "Vollrad Kutscher", websiteTitel: "Werkverzeichnis", titelZeile1: "Werkverzeichnis von",
   titelZeile2: "Vollrad Kutscher", copyright: "Vollrad Kutscher",
-  roles: Object.fromEntries(ROLES.map(r => [member(r), r])),
-  active: true, updatedAt: EARLIER,
+  roles: Object.fromEntries(ROLLEN.map(r => [mitglied(r), r])),
+  active: true, updatedAt: FRUEHER,
 };
-const work = { InvNr: "OB1", werkgruppe: "objekte", Titel: "Ding", updatedAt: EARLIER };
+const werk = { InvNr: "OB1", werkgruppe: "objekte", Titel: "Ding", updatedAt: FRUEHER };
 const gruppe = { titel: "Fotografie", kurztitel: null, reihenfolge: 13 };
-const seite = { titel: "Kontakt", kategorie: "Footer", reihenfolge: 1, text: "**Hallo**\n", updatedAt: EARLIER };
+const seite = { titel: "Kontakt", kategorie: "Footer", reihenfolge: 1, text: "**Hallo**\n", updatedAt: FRUEHER };
 
-function auth(email, { verified = true, superAdmin = false } = {}) {
+function anmeldung(email, { bestaetigt = true, superAdmin = false } = {}) {
   if (!email) return null;
-  return { uid: email, token: { email, email_verified: verified, ...(superAdmin && { superAdmin: true }) } };
+  return { uid: email, token: { email, email_verified: bestaetigt, ...(superAdmin && { superAdmin: true }) } };
 }
-const as = who => who === SUPER ? auth(SUPER, { superAdmin: true }) : auth(who);
+const als = wer => wer === SUPER ? anmeldung(SUPER, { superAdmin: true }) : anmeldung(wer);
 
-// Every case sees the same world: one artist, one work, one fresh history entry.
-const world = [
-  { function: "get", args: [{ exactValue: `${root}/artists/kutscher` }], result: { value: { data: kutscher } } },
+// Jeder Fall sieht dieselbe Welt: eine Künstlerin, ein Werk, ein neuer Verlaufseintrag.
+const welt = [
+  { function: "get", args: [{ exactValue: `${wurzel}/artists/kutscher` }], result: { value: { data: kutscher } } },
   { function: "get", args: [{ anyValue: {} }], result: { value: null } },
-  { function: "getAfter", args: [{ exactValue: `${root}/artists/kutscher/history/h1` }],
+  { function: "getAfter", args: [{ exactValue: `${wurzel}/artists/kutscher/history/h1` }],
     result: { value: { data: { work: "ob1" } } } },
   { function: "exists", args: [{ anyValue: {} }], result: { value: false } },
 ];
 
-function test(name, expectation, authObj, method, path, { data, existing } = {}) {
+function fall(name, erwartung, auth, methode, pfad, { daten, vorhanden } = {}) {
   return {
     name,
-    expectation,
+    expectation: erwartung,
     request: {
-      auth: authObj, method, path: `${root}/${path}`, time: NOW,
-      ...(data && { resource: { data } }),
+      auth, method: methode, path: `${wurzel}/${pfad}`, time: JETZT,
+      ...(daten && { resource: { data: daten } }),
     },
-    ...(existing && { resource: { data: existing } }),
-    functionMocks: world,
+    ...(vorhanden && { resource: { data: vorhanden } }),
+    functionMocks: welt,
   };
 }
 
-// One request per permission that needs exactly that permission and is
-// otherwise valid.
-const probes = {
-  "read": who => test(`${who} read`, null, as(who), "get", "artists/kutscher/works/ob1", { existing: work }),
-  "works.edit": who => test(`${who} works.edit`, null, as(who), "update", "artists/kutscher/works/ob1",
-    { data: { ...work, Titel: "Neu", updatedAt: NOW, lastChange: "h1" }, existing: work }),
-  "werkgruppen.edit": who => test(`${who} werkgruppen.edit`, null, as(who), "create",
-    "artists/kutscher/werkgruppen/fotografie", { data: gruppe }),
-  "seiten.edit": who => test(`${who} seiten.edit`, null, as(who), "update", "artists/kutscher/seiten/kontakt",
-    { data: { ...seite, text: "Neu\n", updatedAt: NOW }, existing: seite }),
-  "settings.edit": who => test(`${who} settings.edit`, null, as(who), "update", "artists/kutscher",
-    { data: { ...kutscher, titel: "Neu", updatedAt: NOW }, existing: kutscher }),
-  "roles.manage": who => test(`${who} roles.manage`, null, as(who), "update", "artists/kutscher",
-    { data: { ...kutscher, roles: { ...kutscher.roles, [STRANGER]: "editor" }, updatedAt: NOW }, existing: kutscher }),
-  "publish": who => test(`${who} publish`, null, as(who), "create", "artists/kutscher/veroeffentlichungen/v1",
-    { data: { von: who, angefordert: NOW, status: "angefordert" } }),
+// Je Berechtigung eine Anfrage, die genau diese Berechtigung braucht und sonst
+// gültig ist.
+const proben = {
+  "lesen": wer => fall(`${wer} lesen`, null, als(wer), "get", "artists/kutscher/works/ob1", { vorhanden: werk }),
+  "werke.bearbeiten": wer => fall(`${wer} werke.bearbeiten`, null, als(wer), "update", "artists/kutscher/works/ob1",
+    { daten: { ...werk, Titel: "Neu", updatedAt: JETZT, lastChange: "h1" }, vorhanden: werk }),
+  "werkgruppen.bearbeiten": wer => fall(`${wer} werkgruppen.bearbeiten`, null, als(wer), "create",
+    "artists/kutscher/werkgruppen/fotografie", { daten: gruppe }),
+  "seiten.bearbeiten": wer => fall(`${wer} seiten.bearbeiten`, null, als(wer), "update", "artists/kutscher/seiten/kontakt",
+    { daten: { ...seite, text: "Neu\n", updatedAt: JETZT }, vorhanden: seite }),
+  "einstellungen.bearbeiten": wer => fall(`${wer} einstellungen.bearbeiten`, null, als(wer), "update", "artists/kutscher",
+    { daten: { ...kutscher, titel: "Neu", updatedAt: JETZT }, vorhanden: kutscher }),
+  "rollen.verwalten": wer => fall(`${wer} rollen.verwalten`, null, als(wer), "update", "artists/kutscher",
+    { daten: { ...kutscher, roles: { ...kutscher.roles, [FREMDE]: "editor" }, updatedAt: JETZT }, vorhanden: kutscher }),
+  "veroeffentlichen": wer => fall(`${wer} veroeffentlichen`, null, als(wer), "create", "artists/kutscher/veroeffentlichungen/v1",
+    { daten: { von: wer, angefordert: JETZT, status: "angefordert" } }),
 };
 
-const allPermissions = [...new Set(Object.values(PERMISSIONS).flat())];
-const missing = allPermissions.filter(p => !probes[p]);
-if (missing.length) {
-  console.error(`No probe for permission(s): ${missing.join(", ")}. Add one to tools/rules_test.mjs.`);
+const alleBerechtigungen = [...new Set(Object.values(BERECHTIGUNGEN).flat())];
+const ohneProbe = alleBerechtigungen.filter(b => !proben[b]);
+if (ohneProbe.length) {
+  console.error(`No probe for permission(s): ${ohneProbe.join(", ")}. Add one to tools/rules_test.mjs.`);
   process.exit(1);
 }
 
 const matrix = [];
-for (const permission of allPermissions) {
-  for (const role of ROLES) {
-    matrix.push({ ...probes[permission](member(role)),
-      expectation: PERMISSIONS[role].includes(permission) ? "ALLOW" : "DENY" });
+for (const berechtigung of alleBerechtigungen) {
+  for (const rolle of ROLLEN) {
+    matrix.push({ ...proben[berechtigung](mitglied(rolle)),
+      expectation: BERECHTIGUNGEN[rolle].includes(berechtigung) ? "ALLOW" : "DENY" });
   }
-  matrix.push({ ...probes[permission](SUPER), expectation: "ALLOW" });
-  matrix.push({ ...probes[permission](STRANGER), expectation: "DENY" });
+  matrix.push({ ...proben[berechtigung](SUPER), expectation: "ALLOW" });
+  matrix.push({ ...proben[berechtigung](FREMDE), expectation: "DENY" });
 }
 
-const ADMIN = member("admin"), EDITOR = member("editor");
-const newArtist = { ...kutscher, titel: "Neue Künstlerin", roles: {}, updatedAt: NOW };
+const ADMIN = mitglied("admin"), EDITOR = mitglied("editor");
+const neueKuenstlerin = { ...kutscher, titel: "Neue Künstlerin", roles: {}, updatedAt: JETZT };
 
-const cases = [
+const faelle = [
   ...matrix,
 
-  test("super-admin creates an artist", "ALLOW", as(SUPER), "create", "artists/neue", { data: newArtist }),
-  test("admin cannot create artists", "DENY", as(ADMIN), "create", "artists/neue", { data: newArtist }),
-  test("superAdmin claim must be true, not truthy", "DENY",
+  fall("Super-Admin legt Künstlerin an", "ALLOW", als(SUPER), "create", "artists/neue", { daten: neueKuenstlerin }),
+  fall("Admin legt keine Künstler:innen an", "DENY", als(ADMIN), "create", "artists/neue", { daten: neueKuenstlerin }),
+  fall("superAdmin-Claim muss true sein, nicht nur wahrheitsähnlich", "DENY",
     { uid: "x", token: { email: "x@example.org", email_verified: true, superAdmin: "yes" } },
-    "create", "artists/neue", { data: newArtist }),
-  test("bad artist id", "DENY", as(SUPER), "create", "artists/Neue Künstlerin", { data: newArtist }),
-  test("unknown field", "DENY", as(SUPER), "create", "artists/neue", { data: { ...newArtist, extra: 1 } }),
-  test("client-chosen timestamp", "DENY", as(SUPER), "create", "artists/neue",
-    { data: { ...newArtist, updatedAt: EARLIER } }),
-  test("missing title", "DENY", as(SUPER), "create", "artists/neue", { data: { ...newArtist, titel: "" } }),
-  test("unknown role", "DENY", as(SUPER), "create", "artists/neue",
-    { data: { ...newArtist, roles: { [STRANGER]: "owner" } } }),
+    "create", "artists/neue", { daten: neueKuenstlerin }),
+  fall("ungültige Kennung", "DENY", als(SUPER), "create", "artists/Neue Künstlerin", { daten: neueKuenstlerin }),
+  fall("unbekanntes Feld", "DENY", als(SUPER), "create", "artists/neue", { daten: { ...neueKuenstlerin, extra: 1 } }),
+  fall("Zeitstempel vom Client", "DENY", als(SUPER), "create", "artists/neue",
+    { daten: { ...neueKuenstlerin, updatedAt: FRUEHER } }),
+  fall("Titel fehlt", "DENY", als(SUPER), "create", "artists/neue", { daten: { ...neueKuenstlerin, titel: "" } }),
+  fall("unbekannte Rolle", "DENY", als(SUPER), "create", "artists/neue",
+    { daten: { ...neueKuenstlerin, roles: { [FREMDE]: "owner" } } }),
 
-  test("super-admin lists artists", "ALLOW", as(SUPER), "list", "artists/kutscher", { existing: kutscher }),
-  test("member lists own artist", "ALLOW", as(EDITOR), "list", "artists/kutscher", { existing: kutscher }),
-  test("stranger cannot list", "DENY", as(STRANGER), "list", "artists/kutscher", { existing: kutscher }),
-  test("unverified email cannot read", "DENY", auth(EDITOR, { verified: false }), "get",
-    "artists/kutscher/works/ob1", { existing: work }),
-  test("signed out cannot read", "DENY", null, "get", "artists/kutscher/works/ob1", { existing: work }),
+  fall("Super-Admin listet Künstler:innen", "ALLOW", als(SUPER), "list", "artists/kutscher", { vorhanden: kutscher }),
+  fall("Mitglied listet die eigene Künstlerin", "ALLOW", als(EDITOR), "list", "artists/kutscher", { vorhanden: kutscher }),
+  fall("Fremde listet nicht", "DENY", als(FREMDE), "list", "artists/kutscher", { vorhanden: kutscher }),
+  fall("unbestätigte E-Mail liest nicht", "DENY", anmeldung(EDITOR, { bestaetigt: false }), "get",
+    "artists/kutscher/works/ob1", { vorhanden: werk }),
+  fall("abgemeldet liest nicht", "DENY", null, "get", "artists/kutscher/works/ob1", { vorhanden: werk }),
 
-  test("admin edits settings and roles together", "ALLOW", as(ADMIN), "update", "artists/kutscher",
-    { data: { ...kutscher, titel: "Neu", roles: {}, updatedAt: NOW }, existing: kutscher }),
-  test("nobody deletes an artist", "DENY", as(SUPER), "delete", "artists/kutscher", { existing: kutscher }),
+  fall("Admin ändert Einstellungen und Rollen zusammen", "ALLOW", als(ADMIN), "update", "artists/kutscher",
+    { daten: { ...kutscher, titel: "Neu", roles: {}, updatedAt: JETZT }, vorhanden: kutscher }),
+  fall("niemand löscht eine Künstlerin", "DENY", als(SUPER), "delete", "artists/kutscher", { vorhanden: kutscher }),
 
-  test("admin of another artist cannot add a Werkgruppe", "DENY", as(ADMIN), "create",
-    "artists/andere/werkgruppen/x", { data: gruppe }),
-  test("Werkgruppe order must be an integer", "DENY", as(ADMIN), "create",
-    "artists/kutscher/werkgruppen/fotografie", { data: { ...gruppe, reihenfolge: "13" } }),
-  test("Werkgruppe has no image folder any more", "DENY", as(ADMIN), "create",
-    "artists/kutscher/werkgruppen/fotografie", { data: { ...gruppe, ordner: "fotografie" } }),
-  test("nobody deletes a Werkgruppe", "DENY", as(SUPER), "delete", "artists/kutscher/werkgruppen/objekte",
-    { existing: gruppe }),
+  fall("Admin einer anderen Künstlerin legt keine Werkgruppe an", "DENY", als(ADMIN), "create",
+    "artists/andere/werkgruppen/x", { daten: gruppe }),
+  fall("Reihenfolge der Werkgruppe muss eine ganze Zahl sein", "DENY", als(ADMIN), "create",
+    "artists/kutscher/werkgruppen/fotografie", { daten: { ...gruppe, reihenfolge: "13" } }),
+  fall("Werkgruppe hat keinen Bildordner mehr", "DENY", als(ADMIN), "create",
+    "artists/kutscher/werkgruppen/fotografie", { daten: { ...gruppe, ordner: "fotografie" } }),
+  fall("niemand löscht eine Werkgruppe", "DENY", als(SUPER), "delete", "artists/kutscher/werkgruppen/objekte",
+    { vorhanden: gruppe }),
 
-  test("editor reads pages", "ALLOW", as(EDITOR), "get", "artists/kutscher/seiten/kontakt", { existing: seite }),
-  test("editor cannot delete a page", "DENY", as(EDITOR), "delete", "artists/kutscher/seiten/kontakt", { existing: seite }),
-  test("admin deletes a page", "ALLOW", as(ADMIN), "delete", "artists/kutscher/seiten/kontakt", { existing: seite }),
-  test("page needs Header or Footer", "DENY", as(ADMIN), "create", "artists/kutscher/seiten/neu",
-    { data: { ...seite, kategorie: "Seitenleiste", updatedAt: NOW } }),
-  test("Inv. Nr. cannot change", "DENY", as(EDITOR), "update", "artists/kutscher/works/ob1",
-    { data: { ...work, InvNr: "OB2", updatedAt: NOW, lastChange: "h1" }, existing: work }),
-  test("edit without history entry", "DENY", as(EDITOR), "update", "artists/kutscher/works/ob1",
-    { data: { ...work, Titel: "Neu", updatedAt: NOW, lastChange: "h2" }, existing: work }),
-  test("publish request in someone else's name", "DENY", as(ADMIN), "create",
-    "artists/kutscher/veroeffentlichungen/v1", { data: { von: EDITOR, angefordert: NOW, status: "angefordert" } }),
-  test("publish request with its own status", "DENY", as(ADMIN), "create",
-    "artists/kutscher/veroeffentlichungen/v1", { data: { von: ADMIN, angefordert: NOW, status: "fertig" } }),
-  test("nobody updates a publication", "DENY", as(SUPER), "update", "artists/kutscher/veroeffentlichungen/v1",
-    { data: { von: SUPER, angefordert: NOW, status: "fertig" },
-      existing: { von: SUPER, angefordert: EARLIER, status: "angefordert" } }),
-  test("editor reads publications", "ALLOW", as(EDITOR), "get", "artists/kutscher/veroeffentlichungen/v1",
-    { existing: { von: ADMIN, angefordert: EARLIER, status: "fertig" } }),
-  test("history entry in someone else's name", "DENY", as(EDITOR), "create", "artists/kutscher/history/h1",
-    { data: { work: "ob1", by: ADMIN, at: NOW, changes: {} } }),
+  fall("Bearbeiter:in liest Seiten", "ALLOW", als(EDITOR), "get", "artists/kutscher/seiten/kontakt", { vorhanden: seite }),
+  fall("Bearbeiter:in löscht keine Seite", "DENY", als(EDITOR), "delete", "artists/kutscher/seiten/kontakt", { vorhanden: seite }),
+  fall("Admin löscht eine Seite", "ALLOW", als(ADMIN), "delete", "artists/kutscher/seiten/kontakt", { vorhanden: seite }),
+  fall("Seite braucht Header oder Footer", "DENY", als(ADMIN), "create", "artists/kutscher/seiten/neu",
+    { daten: { ...seite, kategorie: "Seitenleiste", updatedAt: JETZT } }),
+  fall("Inv. Nr. bleibt", "DENY", als(EDITOR), "update", "artists/kutscher/works/ob1",
+    { daten: { ...werk, InvNr: "OB2", updatedAt: JETZT, lastChange: "h1" }, vorhanden: werk }),
+  fall("Änderung ohne Verlaufseintrag", "DENY", als(EDITOR), "update", "artists/kutscher/works/ob1",
+    { daten: { ...werk, Titel: "Neu", updatedAt: JETZT, lastChange: "h2" }, vorhanden: werk }),
+  fall("Veröffentlichung im Namen einer anderen", "DENY", als(ADMIN), "create",
+    "artists/kutscher/veroeffentlichungen/v1", { daten: { von: EDITOR, angefordert: JETZT, status: "angefordert" } }),
+  fall("Veröffentlichung mit eigenem Status", "DENY", als(ADMIN), "create",
+    "artists/kutscher/veroeffentlichungen/v1", { daten: { von: ADMIN, angefordert: JETZT, status: "fertig" } }),
+  fall("niemand ändert eine Veröffentlichung", "DENY", als(SUPER), "update", "artists/kutscher/veroeffentlichungen/v1",
+    { daten: { von: SUPER, angefordert: JETZT, status: "fertig" },
+      vorhanden: { von: SUPER, angefordert: FRUEHER, status: "angefordert" } }),
+  fall("Bearbeiter:in liest Veröffentlichungen", "ALLOW", als(EDITOR), "get", "artists/kutscher/veroeffentlichungen/v1",
+    { vorhanden: { von: ADMIN, angefordert: FRUEHER, status: "fertig" } }),
+  fall("Verlaufseintrag im Namen einer anderen", "DENY", als(EDITOR), "create", "artists/kutscher/history/h1",
+    { daten: { work: "ob1", by: ADMIN, at: JETZT, changes: {} } }),
 ];
 
 const client = await new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] }).getClient();
-const res = await client.request({
-  url: `https://firebaserules.googleapis.com/v1/projects/${PROJECT}:test`,
+const antwort = await client.request({
+  url: `https://firebaserules.googleapis.com/v1/projects/${PROJEKT}:test`,
   method: "POST",
-  headers: { "x-goog-user-project": PROJECT },
+  headers: { "x-goog-user-project": PROJEKT },
   data: {
     source: { files: [{ name: "firestore.rules", content: fs.readFileSync("firestore.rules", "utf8") }] },
-    testSuite: { testCases: cases.map(({ name, ...c }) => c) },
+    testSuite: { testCases: faelle.map(({ name, ...f }) => f) },
   },
 });
 
-let failed = 0;
-for (const issue of res.data.issues ?? []) console.log(`rules: ${issue.severity} ${issue.description}`);
-res.data.testResults.forEach((r, i) => {
+let fehlgeschlagen = 0;
+for (const problem of antwort.data.issues ?? []) console.log(`rules: ${problem.severity} ${problem.description}`);
+antwort.data.testResults.forEach((r, i) => {
   const ok = r.state === "SUCCESS";
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${cases[i].expectation.padEnd(5)} ${cases[i].name}`);
+  if (!ok) fehlgeschlagen++;
+  console.log(`${ok ? "ok  " : "FAIL"} ${faelle[i].expectation.padEnd(5)} ${faelle[i].name}`);
   if (!ok) for (const m of r.debugMessages ?? []) console.log(`       ${m}`);
 });
-console.log(`\n${cases.length - failed}/${cases.length} passed (${matrix.length} from the permission table)`);
-process.exit(failed ? 1 : 0);
+console.log(`\n${faelle.length - fehlgeschlagen}/${faelle.length} passed (${matrix.length} from the permission table)`);
+process.exit(fehlgeschlagen ? 1 : 0);
