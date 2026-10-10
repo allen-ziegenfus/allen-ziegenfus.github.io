@@ -18,7 +18,7 @@ service cloud.firestore {
 
     function permissions() {
       return {
-        "admin":  ["read", "works.edit", "werkgruppen.edit", "seiten.edit", "settings.edit", "roles.manage"],
+        "admin":  ["read", "works.edit", "werkgruppen.edit", "seiten.edit", "settings.edit", "roles.manage", "publish"],
         "editor": ["read", "works.edit"]
       };
     }
@@ -131,6 +131,17 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && getAfter(/databases/$(database)/documents/artists/$(artist)/history/$(request.resource.data.lastChange)).data.work == work
         && !exists(/databases/$(database)/documents/artists/$(artist)/history/$(request.resource.data.lastChange));
+    }
+
+    // Publishing: someone who may asks for the site to be rebuilt; the function
+    // `veroeffentlichen` (gcf/publish.js) starts Cloud Build and fills in the rest.
+    match /artists/{artist}/veroeffentlichungen/{v} {
+      allow read: if can(artist, "read");
+      allow create: if can(artist, "publish")
+        && request.resource.data.keys().hasOnly(["von", "angefordert", "status"])
+        && request.resource.data.von == email()
+        && request.resource.data.angefordert == request.time
+        && request.resource.data.status == "angefordert";
     }
 
     // Append-only change log: who, when, which work. Never edited or deleted.

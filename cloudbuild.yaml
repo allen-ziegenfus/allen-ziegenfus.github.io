@@ -1,0 +1,49 @@
+# Builds one site from Firestore and publishes it to Cloudflare Pages.
+#
+# Run by the site's Cloud Build trigger (infra/gcp): on a push to its branch, and
+# when someone presses Veröffentlichen in the admin page (gcf/publish.js). The
+# trigger sets every substitution below; the titles come from the artist's
+# Firestore document. It runs as werkverzeichnis-build@, which reads Firestore
+# and the bucket listing; the Cloudflare token comes from Secret Manager.
+options:
+  # Required with a user-chosen service account.
+  logging: CLOUD_LOGGING_ONLY
+  # A substitution the trigger doesn't set fails the build instead of going empty.
+  substitution_option: MUST_MATCH
+
+steps:
+  - id: install
+    name: node:24
+    entrypoint: bash
+    args: [-c, 'command -v yarn >/dev/null || npm install -g yarn@1; yarn install --frozen-lockfile --non-interactive']
+
+  - id: build
+    name: node:24
+    entrypoint: bash
+    args: [-c, 'command -v yarn >/dev/null || npm install -g yarn@1; yarn build']
+    env:
+      - SITE=${_SITE}
+      - FIRESTORE_PROJECT=$PROJECT_ID
+      - FIRESTORE_DATABASE=${_FIRESTORE_DATABASE}
+      - ARTIST_ID=${_ARTIST}
+      - STRICT=1
+
+  - id: deploy
+    name: node:24
+    entrypoint: bash
+    args:
+      - -c
+      - >-
+        npx wrangler pages deploy dist
+        --project-name=${_PAGES_PROJECT} --branch=$BRANCH_NAME
+        --commit-hash=$COMMIT_SHA --commit-message="Cloud Build $BUILD_ID"
+    env:
+      - CLOUDFLARE_ACCOUNT_ID=${_CLOUDFLARE_ACCOUNT_ID}
+    secretEnv: [CLOUDFLARE_API_TOKEN]
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/cloudflare-pages-token/versions/latest
+      env: CLOUDFLARE_API_TOKEN
+
+timeout: 1200s
