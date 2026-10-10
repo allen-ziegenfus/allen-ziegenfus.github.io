@@ -18,7 +18,7 @@ service cloud.firestore {
 
     function permissions() {
       return {
-        "admin":  ["read", "works.edit", "werkgruppen.edit", "settings.edit", "roles.manage"],
+        "admin":  ["read", "works.edit", "werkgruppen.edit", "seiten.edit", "settings.edit", "roles.manage"],
         "editor": ["read", "works.edit"]
       };
     }
@@ -95,6 +95,25 @@ service cloud.firestore {
       allow update: if can(artist, "werkgruppen.edit") && validWerkgruppe(request.resource.data);
       // Not yet: its works would be left without a Werkgruppe.
       allow delete: if false;
+    }
+
+    function validSeite(d) {
+      return d.keys().hasOnly(["titel", "kategorie", "reihenfolge", "text", "updatedAt"])
+        && d.titel is string && d.titel.size() > 0 && d.titel.size() <= 100
+        && d.kategorie in ["Header", "Footer"]
+        && d.reihenfolge is int
+        && d.text is string && d.text.size() <= 200000
+        && d.updatedAt == request.time;
+    }
+
+    // Content pages (Einführung, Impressum, …): Markdown, edited in the admin page.
+    match /artists/{artist}/seiten/{seite} {
+      allow read: if can(artist, "read");
+      allow create: if can(artist, "seiten.edit")
+        && seite.matches("^[a-z0-9][a-z0-9-]{0,59}$")
+        && validSeite(request.resource.data);
+      allow update: if can(artist, "seiten.edit") && validSeite(request.resource.data);
+      allow delete: if can(artist, "seiten.edit");
     }
 
     match /artists/{artist}/works/{work} {

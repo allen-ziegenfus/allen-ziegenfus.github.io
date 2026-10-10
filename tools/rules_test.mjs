@@ -37,6 +37,7 @@ const kutscher = {
 };
 const work = { InvNr: "OB1", werkgruppe: "objekte", Titel: "Ding", updatedAt: EARLIER };
 const gruppe = { titel: "Fotografie", kurztitel: null, reihenfolge: 13 };
+const seite = { titel: "Kontakt", kategorie: "Footer", reihenfolge: 1, text: "**Hallo**\n", updatedAt: EARLIER };
 
 function auth(email, { verified = true, superAdmin = false } = {}) {
   if (!email) return null;
@@ -74,6 +75,8 @@ const probes = {
     { data: { ...work, Titel: "Neu", updatedAt: NOW, lastChange: "h1" }, existing: work }),
   "werkgruppen.edit": who => test(`${who} werkgruppen.edit`, null, as(who), "create",
     "artists/kutscher/werkgruppen/fotografie", { data: gruppe }),
+  "seiten.edit": who => test(`${who} seiten.edit`, null, as(who), "update", "artists/kutscher/seiten/kontakt",
+    { data: { ...seite, text: "Neu\n", updatedAt: NOW }, existing: seite }),
   "settings.edit": who => test(`${who} settings.edit`, null, as(who), "update", "artists/kutscher",
     { data: { ...kutscher, titel: "Neu", updatedAt: NOW }, existing: kutscher }),
   "roles.manage": who => test(`${who} roles.manage`, null, as(who), "update", "artists/kutscher",
@@ -134,6 +137,11 @@ const cases = [
   test("nobody deletes a Werkgruppe", "DENY", as(SUPER), "delete", "artists/kutscher/werkgruppen/objekte",
     { existing: gruppe }),
 
+  test("editor reads pages", "ALLOW", as(EDITOR), "get", "artists/kutscher/seiten/kontakt", { existing: seite }),
+  test("editor cannot delete a page", "DENY", as(EDITOR), "delete", "artists/kutscher/seiten/kontakt", { existing: seite }),
+  test("admin deletes a page", "ALLOW", as(ADMIN), "delete", "artists/kutscher/seiten/kontakt", { existing: seite }),
+  test("page needs Header or Footer", "DENY", as(ADMIN), "create", "artists/kutscher/seiten/neu",
+    { data: { ...seite, kategorie: "Seitenleiste", updatedAt: NOW } }),
   test("Inv. Nr. cannot change", "DENY", as(EDITOR), "update", "artists/kutscher/works/ob1",
     { data: { ...work, InvNr: "OB2", updatedAt: NOW, lastChange: "h1" }, existing: work }),
   test("edit without history entry", "DENY", as(EDITOR), "update", "artists/kutscher/works/ob1",

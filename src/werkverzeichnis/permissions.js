@@ -9,7 +9,7 @@
  * do everything, for every artist, and create artists.
  */
 export const PERMISSIONS = {
-  admin: ["read", "works.edit", "werkgruppen.edit", "settings.edit", "roles.manage"],
+  admin: ["read", "works.edit", "werkgruppen.edit", "seiten.edit", "settings.edit", "roles.manage"],
   editor: ["read", "works.edit"],
 };
 
