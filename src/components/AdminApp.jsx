@@ -7,6 +7,7 @@ import { slugify } from "../werkverzeichnis/slugify";
 import { can, ROLE_LABELS, ROLES } from "../werkverzeichnis/permissions.js";
 import { auth, db } from "./firebaseClient.js";
 import Seiten from "./Seiten.jsx";
+import Veroeffentlichen from "./Veroeffentlichen.jsx";
 
 /**
  * Firestore test (FIRESTORE.md): the multi-tenant admin page. Super-admins
@@ -188,6 +189,7 @@ function Artist({ id, me, isSuper, initial, onClose }) {
         {error && <span className="text-red-700 text-sm">{error}</span>}
       </div>
 
+      {!isNew && <Veroeffentlichen artistId={id} me={me} allowed={can(who, "publish")} />}
       {!isNew && <Werkgruppen artistId={id} editable={can(who, "werkgruppen.edit")} />}
       {!isNew && <Seiten artistId={id} editable={can(who, "seiten.edit")} />}
     </div>
