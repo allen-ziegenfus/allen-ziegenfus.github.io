@@ -1,11 +1,11 @@
 /**
- * The Werkverzeichnis data model, read from Firestore
- * (artists/{artist} and its werkgruppen, works, seiten, medien).
+ * Das Datenmodell des Werkverzeichnisses, gelesen aus Firestore
+ * (artists/{artist} und seine Sammlungen werkgruppen, works, seiten, medien).
  */
 import { slugify } from "./slugify.js";
 
-/** Site settings, from the artist document (edited in the admin page). */
-export interface Artist {
+/** Einstellungen der Seite, aus dem Künstler-Dokument (bearbeitet in der Verwaltungsseite). */
+export interface Kuenstler {
   titel: string;
   websiteTitel: string;
   titelZeile1: string;
@@ -18,22 +18,22 @@ export interface Werkgruppe {
   titel: string;
   kurztitel?: string;
   reihenfolge: number;
-  /** Cover image in Cloud Storage (object path). */
+  /** Titelbild in Cloud Storage (Objektpfad). */
   cover?: string;
 }
 
-/** The fields of a work, in the order the site's JSON has always had them. */
-export const WORK_FIELDS = [
+/** Die Felder eines Werks, in der Reihenfolge, die das JSON der Seite immer hatte. */
+export const WERK_FELDER = [
   "InvNr", "Anzahl", "Werkgruppe", "Maße", "Material", "Beschreibung", "Jahr", "Zustand",
   "Standort", "Titel", "Technik", "Auflage", "Signatur", "Foto", "Ausstellung", "Literatur",
   "Bibliographie",
 ] as const;
 
-export type Work = {
+export type Werk = {
   slug: string; werkgruppe: string; InvNr: string;
-  /** Images in Cloud Storage (object paths), in order; the first is the thumbnail. */
+  /** Bilder in Cloud Storage (Objektpfade), in Reihenfolge; das erste ist das Vorschaubild. */
   images?: string[];
-} & Partial<Record<(typeof WORK_FIELDS)[number], string>>;
+} & Partial<Record<(typeof WERK_FELDER)[number], string>>;
 
 export interface Seite {
   slug: string;
@@ -45,8 +45,8 @@ export interface Seite {
 }
 
 /**
- * The web versions of one original, made by the image function (gcf/process.js)
- * and keyed by the original's MD5. Files: <artist>/<md5>-<width>.<format> in R2.
+ * Die Webversionen eines Originals, erzeugt von der Bildfunktion (gcf/process.js),
+ * unter der MD5 des Originals. Dateien: <artist>/<md5>-<breite>.<format> in R2.
  */
 export interface Medium {
   art: "bild" | "video" | "nicht unterstützt" | "fehler";
@@ -58,34 +58,35 @@ export interface Medium {
   fehler?: string;
 }
 
-export interface Catalog {
-  artist: Artist;
+export interface Katalog {
+  kuenstler: Kuenstler;
   werkgruppen: Werkgruppe[];
-  works: Work[];
+  werke: Werk[];
   seiten: Seite[];
-  /** Web versions by fingerprint. */
+  /** Webversionen nach Fingerabdruck (MD5). */
   medien: Map<string, Medium>;
-  /** Data problems found while reading; the build reports them. */
-  problems: string[];
+  /** Beim Lesen gefundene Datenprobleme; der Build meldet sie. */
+  probleme: string[];
 }
 
-/** An empty string reads as absent. */
-const cell = (v: string | undefined) => (v && v.trim() !== "" ? v : undefined);
+/** Eine leere Zeichenkette gilt als nicht vorhanden. */
+const wert = (v: string | undefined) => (v && v.trim() !== "" ? v : undefined);
 
 /**
- * Runs with the build's Google credentials, which bypass the security rules
- * (read access is all the build service account has).
+ * Läuft mit den Google-Zugangsdaten des Builds, für die die Sicherheitsregeln
+ * nicht gelten (das Build-Servicekonto darf nur lesen).
  */
-export async function firestoreCatalog(project: string, databaseId: string, artistId: string): Promise<Catalog> {
+export async function firestoreKatalog(projekt: string, datenbank: string, kuenstlerId: string): Promise<Katalog> {
   const { Firestore } = await import("@google-cloud/firestore");
-  const artistRef = new Firestore({ projectId: project, databaseId }).collection("artists").doc(artistId);
-  const problems: string[] = [];
+  const kuenstlerRef = new Firestore({ projectId: projekt, databaseId: datenbank })
+    .collection("artists").doc(kuenstlerId);
+  const probleme: string[] = [];
 
-  const [a, wg, ws, ss, ms] = await Promise.all([artistRef.get(),
-    ...["werkgruppen", "works", "seiten", "medien"].map(c => artistRef.collection(c).get())]);
-  if (!a.exists) throw new Error(`artist "${artistId}" not in Firestore`);
-  const { titel, websiteTitel, titelZeile1, titelZeile2, copyright } = a.data()!;
-  const artist = { titel, websiteTitel, titelZeile1, titelZeile2, copyright };
+  const [k, wg, ws, ss, ms] = await Promise.all([kuenstlerRef.get(),
+    ...["werkgruppen", "works", "seiten", "medien"].map(c => kuenstlerRef.collection(c).get())]);
+  if (!k.exists) throw new Error(`artist "${kuenstlerId}" not in Firestore`);
+  const { titel, websiteTitel, titelZeile1, titelZeile2, copyright } = k.data()!;
+  const kuenstler = { titel, websiteTitel, titelZeile1, titelZeile2, copyright };
   const medien = new Map(ms.docs.map(d => [d.id, d.data() as Medium]));
 
   const werkgruppen: Werkgruppe[] = wg.docs.map(d => {
@@ -96,21 +97,21 @@ export async function firestoreCatalog(project: string, databaseId: string, arti
     };
   }).sort((a, b) => a.reihenfolge - b.reihenfolge);
 
-  const known = new Set(werkgruppen.map(g => g.slug));
-  const works: Work[] = [];
+  const bekannt = new Set(werkgruppen.map(g => g.slug));
+  const werke: Werk[] = [];
   for (const d of ws.docs) {
     const w = d.data();
-    if (!known.has(w.werkgruppe)) {
-      problems.push(`work ${d.id}: unknown Werkgruppe "${w.werkgruppe}"`);
+    if (!bekannt.has(w.werkgruppe)) {
+      probleme.push(`work ${d.id}: unknown Werkgruppe "${w.werkgruppe}"`);
       continue;
     }
     if (d.id !== slugify(w.InvNr ?? "", { lower: true })) {
-      problems.push(`work ${d.id}: id does not match its Inv. Nr. "${w.InvNr}"`);
+      probleme.push(`work ${d.id}: id does not match its Inv. Nr. "${w.InvNr}"`);
     }
-    const fields = Object.fromEntries(WORK_FIELDS
-      .map(f => [f, cell(w[f])])
+    const felder = Object.fromEntries(WERK_FELDER
+      .map(f => [f, wert(w[f])])
       .filter(([, v]) => v !== undefined));
-    works.push({ ...fields, InvNr: w.InvNr, slug: d.id, werkgruppe: w.werkgruppe, images: w.images });
+    werke.push({ ...felder, InvNr: w.InvNr, slug: d.id, werkgruppe: w.werkgruppe, images: w.images });
   }
 
   const seiten: Seite[] = ss.docs.map(d => {
@@ -118,5 +119,5 @@ export async function firestoreCatalog(project: string, databaseId: string, arti
     return { slug: d.id, titel: s.titel, kategorie: s.kategorie, reihenfolge: s.reihenfolge, text: s.text };
   }).sort((a, b) => a.reihenfolge - b.reihenfolge);
 
-  return { artist, werkgruppen, works, seiten, medien, problems };
+  return { kuenstler, werkgruppen, werke, seiten, medien, probleme };
 }

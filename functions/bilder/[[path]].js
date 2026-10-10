@@ -1,40 +1,41 @@
 /**
- * Cloudflare Pages Function: serves /bilder/<artist>/<file> from the R2 bucket
- * bound as BILDER (Pages project → Settings → Bindings, for Production and
- * Preview). The files are the web versions the Google Cloud function makes
- * (gcf/process.js); their names never change, so they may be cached forever.
- * Range requests are passed through, so videos can be scrubbed.
+ * Cloudflare Pages Function: liefert /bilder/<artist>/<datei> aus dem R2-Bucket,
+ * der als BILDER gebunden ist (Pages-Projekt → Settings → Bindings, für
+ * Production und Preview). Die Dateien sind die Webversionen, die die
+ * Google-Cloud-Funktion erzeugt (gcf/process.js); ihre Namen ändern sich nie,
+ * also dürfen sie für immer gecacht werden. Range-Anfragen werden durchgereicht,
+ * damit man in Videos springen kann.
  */
-async function serve({ params, request, env }, withBody) {
-  const key = params.path.join("/");
-  const ranged = request.headers.has("range");
-  const object = withBody
-    ? await env.BILDER.get(key, { range: ranged ? request.headers : undefined, onlyIf: request.headers })
-    : await env.BILDER.head(key);
-  if (object === null) return new Response("Not found", { status: 404 });
+async function ausliefern({ params, request, env }, mitInhalt) {
+  const schluessel = params.path.join("/");
+  const bereich = request.headers.has("range");
+  const objekt = mitInhalt
+    ? await env.BILDER.get(schluessel, { range: bereich ? request.headers : undefined, onlyIf: request.headers })
+    : await env.BILDER.head(schluessel);
+  if (objekt === null) return new Response("Not found", { status: 404 });
 
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("accept-ranges", "bytes");
+  const kopf = new Headers();
+  objekt.writeHttpMetadata(kopf);
+  kopf.set("etag", objekt.httpEtag);
+  kopf.set("accept-ranges", "bytes");
 
-  if (!withBody) {
-    headers.set("content-length", String(object.size));
-    return new Response(null, { headers });
+  if (!mitInhalt) {
+    kopf.set("content-length", String(objekt.size));
+    return new Response(null, { headers: kopf });
   }
-  // A conditional request whose condition failed: R2 returns no body.
-  if (!("body" in object)) return new Response(null, { status: 304, headers });
+  // Eine bedingte Anfrage, deren Bedingung nicht erfüllt ist: R2 liefert keinen Inhalt.
+  if (!("body" in objekt)) return new Response(null, { status: 304, headers: kopf });
 
-  if (ranged && object.range) {
-    // R2 reports either offset/length or, for "the last n bytes", a suffix.
-    const r = object.range;
-    const offset = "suffix" in r ? object.size - r.suffix : r.offset ?? 0;
-    const length = "suffix" in r ? r.suffix : r.length ?? object.size - offset;
-    headers.set("content-range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
-    return new Response(object.body, { status: 206, headers });
+  if (bereich && objekt.range) {
+    // R2 meldet entweder offset/length oder, für „die letzten n Bytes“, ein suffix.
+    const r = objekt.range;
+    const anfang = "suffix" in r ? objekt.size - r.suffix : r.offset ?? 0;
+    const laenge = "suffix" in r ? r.suffix : r.length ?? objekt.size - anfang;
+    kopf.set("content-range", `bytes ${anfang}-${anfang + laenge - 1}/${objekt.size}`);
+    return new Response(objekt.body, { status: 206, headers: kopf });
   }
-  return new Response(object.body, { headers });
+  return new Response(objekt.body, { headers: kopf });
 }
 
-export const onRequestGet = context => serve(context, true);
-export const onRequestHead = context => serve(context, false);
+export const onRequestGet = kontext => ausliefern(kontext, true);
+export const onRequestHead = kontext => ausliefern(kontext, false);

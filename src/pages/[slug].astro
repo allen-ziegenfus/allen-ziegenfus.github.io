@@ -1,5 +1,5 @@
 ---
-import site from "../../public/site.json";
+import einstellungen from "../../public/site.json";
 import Card from "../components/Card.astro";
 import Layout from "../layouts/Layout.astro";
 import werkgruppen from "../../public/werkgruppen.json";
@@ -11,12 +11,12 @@ export async function getStaticPaths() {
     props: { werkgruppe },
   }));
 }
-const { werkgruppe, slug } = Astro.props;
+const { werkgruppe } = Astro.props;
 ---
 
 <Layout
-  title={werkgruppe.Titel + " - " + site.websiteTitel}
-  image={werkgruppe.Titelbild.src}
+  titel={werkgruppe.Titel + " - " + einstellungen.websiteTitel}
+  bild={werkgruppe.Titelbild.src}
 >
   <main>
     <nav class="print:hidden">
@@ -42,8 +42,8 @@ const { werkgruppe, slug } = Astro.props;
             }) => (
               <Card
                 href={"/" + werkgruppe.Slug + "/" + werk.Slug}
-                title={werk.InvNr}
-                body={werk.Titel}
+                titel={werk.InvNr}
+                text={werk.Titel}
                 bild={werk.Bilder[0]}
               />
             )

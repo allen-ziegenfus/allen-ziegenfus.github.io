@@ -1,115 +1,118 @@
-# Werkverzeichnis: set up the infrastructure
+# Werkverzeichnis: Infrastruktur einrichten
 
-Everything a site needs in Google Cloud and Cloudflare is Terraform in `infra/`,
-run by Infrastructure Manager (which keeps the state):
+Alles, was eine Seite in Google Cloud und Cloudflare braucht, ist Terraform in
+`infra/`, ausgeführt von Infrastructure Manager (das den State hält):
 
-- `infra/gcp`: one site's Google Cloud project (Firestore, originals bucket,
-  service accounts and their roles, secrets, the Cloud Build trigger)
-- `infra/cloudflare`: its Pages project and R2 bucket
-- `infra/sites/<site>/`: that site's inputs (`gcp.tfvars`, `cloudflare.tfvars`)
-  and one-time imports of what existed before Terraform
+- `infra/gcp`: das Google-Cloud-Projekt einer Seite (Firestore, Bucket der
+  Originale, Servicekonten und Rollen, Secrets, Cloud-Build-Trigger)
+- `infra/cloudflare`: ihr Pages-Projekt und ihr R2-Bucket
+- `infra/sites/<seite>/`: die Eingaben der Seite (`gcp.tfvars`, `cloudflare.tfvars`)
+  und einmalige Importe dessen, was es vor Terraform schon gab
 
-One **infra project** holds the deployments, the Terraform service account and
-the Cloudflare Terraform token; each site has its own project. This guide does
-the few steps Terraform can't. Open it in Cloud Shell:
+Ein **Infra-Projekt** hält die Deployments, das Terraform-Servicekonto und das
+Cloudflare-Token für Terraform; jede Seite hat ihr eigenes Projekt. Diese Anleitung
+erledigt die wenigen Schritte, die Terraform nicht kann. In der Cloud Shell öffnen:
 
 ```
 https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/allen-ziegenfus/allen-ziegenfus.github.io&cloudshell_git_branch=firestore-build&cloudshell_tutorial=infra/BOOTSTRAP.md
 ```
 
-## 1. The infra project
+## 1. Das Infra-Projekt
 
-Pick a project id (globally unique), find your billing account, and run the
-bootstrap. It creates the project if needed, enables Infrastructure Manager,
-creates the `infra-manager@` service account and the `cloudflare-terraform-token`
-secret, and asks for the token's value (empty skips; see step 2).
+Eine Projekt-ID wählen (weltweit eindeutig), das Rechnungskonto heraussuchen und
+das Bootstrap starten. Es legt das Projekt an, falls nötig, schaltet
+Infrastructure Manager ein, legt das Servicekonto `infra-manager@` und das Secret
+`cloudflare-terraform-token` an und fragt nach dessen Wert (leer überspringt;
+siehe Schritt 2).
 
 ```sh
 gcloud billing accounts list
 export INFRA_PROJECT=werkverzeichnis-infra
-infra/bootstrap.sh infra $INFRA_PROJECT <billing-account-id>
+infra/bootstrap.sh infra $INFRA_PROJECT <rechnungskonto-id>
 ```
 
-## 2. The Cloudflare token for Terraform
+## 2. Das Cloudflare-Token für Terraform
 
-Cloudflare dashboard → My Profile → API Tokens → Create Token → Custom token:
+Cloudflare-Dashboard → My Profile → API Tokens → Create Token → Custom token:
 
 - Account · Cloudflare Pages · Edit
 - Account · Workers R2 Storage · Edit
-- Account resources: the account the sites are in
+- Account resources: das Konto, in dem die Seiten liegen
 
-Store it (or re-run step 1, which asks if no version exists yet):
+Speichern (oder Schritt 1 wiederholen, der fragt, solange es keine Version gibt):
 
 ```sh
 read -rs T && printf %s "$T" | gcloud secrets versions add cloudflare-terraform-token \
   --project=$INFRA_PROJECT --data-file=- && unset T
 ```
 
-This is a different token from the build's `cloudflare-pages-token` (Pages
-deploy only), which lives in the site project.
+Das ist ein anderes Token als `cloudflare-pages-token` des Builds (nur Pages
+deployen), das im Projekt der Seite liegt.
 
-## 3. A site project
+## 3. Ein Seiten-Projekt
 
-For an **existing** project (vollrad-werkverzeichnis) skip to the last command.
-For a **new** site, by hand once, in the console:
+Bei einem **vorhandenen** Projekt (vollrad-werkverzeichnis) direkt zum letzten
+Befehl. Für eine **neue** Seite einmal von Hand, in der Konsole:
 
-1. Create the project and link billing.
-2. Firebase console → Add project → choose it. Authentication → Sign-in method →
-   Google. Add a web app; its config goes into `src/components/firebaseClient.js`.
-3. Cloud Build → Repositories (2nd gen) → Create host connection: GitHub, region
-   europe-west3, install the app for the repository only. Don't link the
-   repository; Terraform does.
-4. Copy `infra/sites/kutscher` to `infra/sites/<site>`, edit both `.tfvars`,
-   delete the `*-imports.tf` files.
+1. Das Projekt anlegen und das Rechnungskonto verknüpfen.
+2. Firebase-Konsole → Projekt hinzufügen → es auswählen. Authentication →
+   Sign-in method → Google. Eine Web-App hinzufügen; ihre Konfiguration kommt in
+   `src/components/firebaseClient.js`.
+3. Cloud Build → Repositories (2nd gen) → Create host connection: GitHub, Region
+   europe-west3, die App nur für das Repository installieren. Das Repository nicht
+   verknüpfen; das macht Terraform.
+4. `infra/sites/kutscher` nach `infra/sites/<seite>` kopieren, beide `.tfvars`
+   anpassen, die `*-imports.tf` löschen.
 
-Then let Terraform manage it:
+Dann übernimmt Terraform:
 
 ```sh
-infra/bootstrap.sh add-site $INFRA_PROJECT <site-project>
+infra/bootstrap.sh add-site $INFRA_PROJECT <seiten-projekt>
 ```
 
-## 4. Apply
+## 4. Anwenden
 
-Preview first; the plan is in the preview's Cloud Build log (the `logs` link).
+Erst die Vorschau; der Plan steht im Cloud-Build-Log der Vorschau (Link `logs`).
 
 ```sh
 infra/apply.sh preview gcp kutscher
 infra/apply.sh apply gcp kutscher
 ```
 
-If Infrastructure Manager isn't offered in europe-west3, add
-`INFRA_LOCATION=europe-west1` in front (only where the state is kept; the
-resources stay where the tfvars say).
+Falls Infrastructure Manager in europe-west3 nicht angeboten wird,
+`INFRA_LOCATION=europe-west1` davorsetzen (betrifft nur, wo der State liegt; die
+Ressourcen bleiben, wo die tfvars sagen).
 
-Then the secret values, in the site project (empty after a new apply):
+Dann die Werte der Secrets, im Projekt der Seite (nach einem neuen Apply leer):
 
 ```sh
-P=<site-project>
+P=<seiten-projekt>
 for s in r2-access-key-id r2-secret-access-key cloudflare-pages-token; do
   read -rsp "$s: " T; echo; printf %s "$T" | gcloud secrets versions add $s --project=$P --data-file=-
 done; unset T
 ```
 
-And Cloudflare, once its token is stored:
+Und Cloudflare, sobald sein Token gespeichert ist:
 
 ```sh
 infra/apply.sh preview cloudflare kutscher
 infra/apply.sh apply cloudflare kutscher
 ```
 
-## 5. Deploy the app
+## 5. Die Anwendung deployen
 
-From the repo, with your own credentials:
+Aus dem Repo, mit den eigenen Zugangsdaten:
 
 ```sh
-node tools/rules_deploy.mjs                     # Firestore rules (tests first)
-(cd gcf && npm ci) && firebase deploy --only functions --project <site-project>
-node tools/super_admin.mjs grant <your-email>   # then create the artist in /firestore-test/admin
+node tools/rules_deploy.mjs                     # Firestore-Regeln (vorher die Tests)
+(cd gcf && npm ci) && firebase deploy --only functions --project <seiten-projekt>
+node tools/super_admin.mjs grant <deine-email>  # dann die Künstler:in in /firestore-test/admin anlegen
 ```
 
-A push to the site's branch builds and deploys it; so does Veröffentlichen.
+Ein Push auf den Branch der Seite baut und deployt sie; Veröffentlichen ebenso.
 
-## Not per-site yet
+## Noch nicht je Seite
 
-These still name the Kutscher site in code: `gcf/index.js` and `gcf/publish.js`
-(project, trigger), `src/components/firebaseClient.js`, and `tools/*` defaults.
+Diese Stellen nennen noch die Kutscher-Seite im Code: `gcf/index.js` und
+`gcf/publish.js` (Projekt, Trigger), `src/components/firebaseClient.js` und die
+Vorgaben in `tools/*`.
