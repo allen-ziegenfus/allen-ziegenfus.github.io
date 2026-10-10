@@ -133,8 +133,26 @@ function checkPrefixCollisions(slugs: string[], where: string) {
   }
 }
 
+/**
+ * Run `jobs` with at most `n` in flight. Downloads wait on the network and sharp
+ * has its own threads, so a handful at once is most of the gain.
+ */
+async function pool(n: number, jobs: (() => Promise<void>)[]) {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, jobs.length) }, async () => {
+    while (next < jobs.length) await jobs[next++]();
+  }));
+}
+
+const IMAGE_CONCURRENCY = Number(process.env.IMAGE_CONCURRENCY ?? 8);
+
 async function build() {
   fs.mkdirSync(IMAGES, { recursive: true });
+
+  // Image work is queued while the rows are read and run only after the data
+  // checks, so a bad row fails the build in a minute rather than after every
+  // image has been fetched.
+  const imageJobs: (() => Promise<void>)[] = [];
 
   const groups = (await source.rows("_Übersicht"))
     .sort((a, b) => Number(a.Reihenfolge) - Number(b.Reihenfolge));
@@ -172,10 +190,10 @@ async function build() {
       // Images are found by convention: <slug>-NN.<ext> in the Werkgruppe's folder.
       // Sorting by filename is what orders them, so -01 becomes the thumbnail.
       const files = imagesFor(group.Tab, slug);
-      let bilder: string[] = [];
-      let i = 1;
-      for (const f of files) bilder.push(await materialise(f, group.Tab, slug, i++));
-      if (!bilder.length) bilder = ["/placeholder.png"];
+      const bilder = files.length ? [...files] : ["/placeholder.png"];
+      files.forEach((f, i) => imageJobs.push(async () => {
+        bilder[i] = await materialise(f, group.Tab, slug, i + 1);
+      }));
 
       const year = Number(cell(row.Jahr));
       if (year) {
@@ -198,7 +216,7 @@ async function build() {
         Foto: cell(row.Foto), Ausstellung: cell(row.Ausstellung),
         Literatur: cell(row.Literatur), Bibliographie: cell(row.Bibliographie),
         Bilder: bilder,
-        Thumbnail: isVideo(bilder[0]) ? "/placeholder.png" : bilder[0],
+        Thumbnail: "/placeholder.png",   // set once the images exist
       });
     }
 
@@ -216,32 +234,24 @@ async function build() {
 
     if (!cell(group.Bild)) problems.push(`Übersicht: no cover image for ${group.Slug}`);
 
-    werkgruppen.push({
+    const werkgruppe = {
       Titel: group.Titel,
       Slug: group.Slug,
-      Thumbnail: cell(group.Bild)
-        ? await materialise(group.Bild, "_covers", group.Slug, 1)
-        : "/placeholder.png",
+      Thumbnail: "/placeholder.png",
       Count: rows.length,
       Records: records,
       Reihenfolge: group.Reihenfolge,
       Kurztitel: cell(group.Kurztitel),
+    };
+    if (cell(group.Bild)) imageJobs.push(async () => {
+      werkgruppe.Thumbnail = await materialise(group.Bild, "_covers", group.Slug, 1);
     });
+    werkgruppen.push(werkgruppe);
     searchMetadata.Werkgruppen.push({
       WerkgruppenSlug: group.Slug, WerkgruppenTitel: group.Titel,
     });
     console.log(`  ${group.Slug.padEnd(22)} ${records.length} works`);
   }
-
-  const searchData = werkgruppen.flatMap(w => w.Records.map((r: any) => ({
-    InvNr: r.InvNr, Beschreibung: r.Beschreibung, Jahr: r.Jahr,
-    Jahre: expandYears(r.Jahr), Slug: r.Slug, Titel: r.Titel,
-    Werkgruppe: r.Werkgruppe, WerkgruppeSlug: r.WerkgruppeSlug, Thumbnail: r.Thumbnail,
-  })));
-
-  fs.writeFileSync(`${PUBLIC}/werkgruppen.json`, JSON.stringify(werkgruppen));
-  fs.writeFileSync(`${PUBLIC}/searchData.json`, JSON.stringify(searchData));
-  fs.writeFileSync(`${PUBLIC}/searchMetadata.json`, JSON.stringify(searchMetadata));
 
   const pageIndex = (await source.rows("_Seiten"))
     .sort((a, b) => Number(a.Reihenfolge) - Number(b.Reihenfolge));
@@ -258,9 +268,6 @@ async function build() {
       Reihenfolge: p.Reihenfolge, Kategorie: p.Kategorie,
     });
   }
-  fs.writeFileSync(`${PUBLIC}/pages.json`, JSON.stringify(pages));
-  fs.writeFileSync(`${PUBLIC}/robots.txt`,
-    `User-agent: *\nAllow: /\n\nSitemap: ${process.env.SITE}/sitemap-index.xml\n`);
 
   const works = werkgruppen.reduce((n, w) => n + w.Records.length, 0);
   console.log(`\n${werkgruppen.length} Werkgruppen, ${works} works, ${pages.length} pages`);
@@ -270,6 +277,35 @@ async function build() {
     for (const p of problems.slice(0, 40)) console.error(`  ! ${p}`);
     if (process.env.STRICT === "1") process.exit(1);
   }
+
+  const started = Date.now();
+  await pool(IMAGE_CONCURRENCY, imageJobs);
+  console.log(`${imageJobs.length} images in ${Math.round((Date.now() - started) / 1000)} s`);
+
+  for (const w of werkgruppen) for (const r of w.Records) {
+    r.Thumbnail = isVideo(r.Bilder[0]) ? "/placeholder.png" : r.Bilder[0];
+  }
+
+  // public/images is restored from the CI cache, so the images of a removed work
+  // would otherwise stay published.
+  const used = new Set(werkgruppen.flatMap(w =>
+    [w.Thumbnail, ...w.Records.flatMap(r => r.Bilder)]).map(p => path.basename(p)));
+  for (const f of fs.readdirSync(IMAGES)) {
+    if (!used.has(f)) fs.rmSync(path.join(IMAGES, f));
+  }
+  const searchData = werkgruppen.flatMap(w => w.Records.map((r: any) => ({
+    InvNr: r.InvNr, Beschreibung: r.Beschreibung, Jahr: r.Jahr,
+    Jahre: expandYears(r.Jahr), Slug: r.Slug, Titel: r.Titel,
+    Werkgruppe: r.Werkgruppe, WerkgruppeSlug: r.WerkgruppeSlug, Thumbnail: r.Thumbnail,
+  })));
+
+  fs.writeFileSync(`${PUBLIC}/werkgruppen.json`, JSON.stringify(werkgruppen));
+  fs.writeFileSync(`${PUBLIC}/searchData.json`, JSON.stringify(searchData));
+  fs.writeFileSync(`${PUBLIC}/searchMetadata.json`, JSON.stringify(searchMetadata));
+
+  fs.writeFileSync(`${PUBLIC}/pages.json`, JSON.stringify(pages));
+  fs.writeFileSync(`${PUBLIC}/robots.txt`,
+    `User-agent: *\nAllow: /\n\nSitemap: ${process.env.SITE}/sitemap-index.xml\n`);
 }
 
 await build();

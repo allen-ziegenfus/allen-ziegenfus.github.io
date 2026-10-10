@@ -107,6 +107,8 @@ export function googleSource(sheetId: string, folderId: string, cacheDir: string
   // "<dir>/<filename>" -> the file's id and a version stamp that changes when its
   // bytes do. The stamp is what keeps a replaced image from being served from cache.
   const files = new Map<string, { id: string; version: string }>();
+  // Downloads run in parallel; two works sharing one file must not fetch it twice.
+  const inflight = new Map<string, Promise<string | null>>();
 
   async function children(parent: string, foldersOnly = false) {
     const out: { id: string; name: string; version: string }[] = [];
@@ -131,6 +133,35 @@ export function googleSource(sheetId: string, folderId: string, cacheDir: string
       pageToken = res.data.nextPageToken ?? undefined;
     } while (pageToken);
     return out;
+  }
+
+  async function download(dir: string, filename: string): Promise<string | null> {
+    const file = files.get(`${dir}/${filename}`);
+    if (!file) return null;
+
+    // The version goes in the cached name, so replacing a file in Drive is a
+    // cache miss rather than a stale hit that never expires.
+    const cached = file.version ? `${file.version}-${filename}` : filename;
+    const into = path.join(cacheDir, dir);
+    const dest = path.join(into, cached);
+    if (fs.existsSync(dest) && fs.statSync(dest).size > 0) return dest;
+
+    fs.mkdirSync(into, { recursive: true });
+    const res: any = await drive.files.get(
+      { fileId: file.id, alt: "media", supportsAllDrives: true },
+      { responseType: "arraybuffer" });
+    fs.writeFileSync(dest, Buffer.from(res.data as ArrayBuffer));
+
+    // Drop older versions of this same file so the cache does not grow a copy
+    // per edit. Versions contain no hyphen, so the first one ends the prefix —
+    // a looser suffix match would also hit `x-<filename>`, which another
+    // download may be using right now.
+    for (const other of fs.readdirSync(into)) {
+      if (other !== cached && other.slice(other.indexOf("-") + 1) === filename) {
+        fs.rmSync(path.join(into, other), { force: true });
+      }
+    }
+    return dest;
   }
 
   return {
@@ -178,31 +209,10 @@ export function googleSource(sheetId: string, folderId: string, cacheDir: string
       }
     },
 
-    async original(dir, filename) {
-      const file = files.get(`${dir}/${filename}`);
-      if (!file) return null;
-
-      // The version goes in the cached name, so replacing a file in Drive is a
-      // cache miss rather than a stale hit that never expires.
-      const cached = file.version ? `${file.version}-${filename}` : filename;
-      const into = path.join(cacheDir, dir);
-      const dest = path.join(into, cached);
-      if (fs.existsSync(dest) && fs.statSync(dest).size > 0) return dest;
-
-      fs.mkdirSync(into, { recursive: true });
-      const res: any = await drive.files.get(
-        { fileId: file.id, alt: "media", supportsAllDrives: true },
-        { responseType: "arraybuffer" });
-      fs.writeFileSync(dest, Buffer.from(res.data as ArrayBuffer));
-
-      // Drop older versions of this same file so the cache does not grow a copy
-      // per edit.
-      for (const other of fs.readdirSync(into)) {
-        if (other !== cached && other.endsWith(`-${filename}`)) {
-          fs.rmSync(path.join(into, other), { force: true });
-        }
-      }
-      return dest;
+    original(dir, filename) {
+      const key = `${dir}/${filename}`;
+      if (!inflight.has(key)) inflight.set(key, download(dir, filename));
+      return inflight.get(key)!;
     },
   };
 }
