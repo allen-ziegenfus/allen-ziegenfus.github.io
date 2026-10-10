@@ -6,14 +6,13 @@ import {
 import { artist, auth, db } from "./firebaseClient.js";
 
 /**
- * Firestore test (FIRESTORE.md): the /bearbeiten/ editor's edit flow against
- * Firestore instead of the Sheet. Edit only, one artist.
+ * The works editor (Firestore). Edit only, one artist.
  *
  * Who may do what is decided by firestore.rules, not here: the works.edit permission,
  * Inv. Nr. fixed, and every edit must carry its history entry.
  */
 
-// Fields the editor shows, in the Sheet's column order. Everything else on the
+// Fields the editor shows, in this order. Everything else on the
 // document (werkgruppe, images, updatedAt, lastChange) is managed, not edited.
 const FIELDS = ["InvNr", "Titel", "Werkgruppe", "Jahr", "Maße", "Material", "Technik",
   "Beschreibung", "Zustand", "Standort", "Signatur", "Auflage", "Anzahl", "Foto",
