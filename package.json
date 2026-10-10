@@ -5,10 +5,10 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "yarn sheets-assets && astro build",
+    "build": "yarn data && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "sheets-assets": "node --no-warnings --loader ts-node/esm src/werkverzeichnis/sheets.ts"
+    "data": "node --no-warnings --loader ts-node/esm src/werkverzeichnis/build_data.ts"
   },
   "dependencies": {
     "@astrojs/react": "^2.1.1",

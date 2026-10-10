@@ -259,7 +259,8 @@ function Werkgruppen({ artistId, editable }) {
     try {
       await runTransaction(db, async tx => {
         if ((await tx.get(ref)).exists()) throw new Error(`„${id}“ gibt es schon.`);
-        tx.set(ref, { titel: titel.trim(), kurztitel: null, reihenfolge });
+        // Its images go in a folder of the same name as its id.
+        tx.set(ref, { titel: titel.trim(), kurztitel: null, reihenfolge, ordner: id });
       });
       setTitel("");
       await load();

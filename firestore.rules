@@ -80,11 +80,13 @@ service cloud.firestore {
     }
 
     function validWerkgruppe(d) {
-      return d.keys().hasOnly(["titel", "kurztitel", "reihenfolge", "cover"])
+      // ordner: the image folder; bild: the cover's filename in _covers.
+      return d.keys().hasOnly(["titel", "kurztitel", "reihenfolge", "ordner", "bild"])
         && d.titel is string && d.titel.size() > 0
         && (d.get("kurztitel", null) == null || d.kurztitel is string)
         && d.reihenfolge is int
-        && (d.get("cover", null) == null || d.cover is string);
+        && d.ordner is string && d.ordner.size() > 0
+        && (d.get("bild", null) == null || d.bild is string);
     }
 
     match /artists/{artist}/werkgruppen/{werkgruppe} {

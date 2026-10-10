@@ -3,7 +3,7 @@ import { slugify } from "./slugify";
 /**
  * Why a new Inv. Nr. cannot be added to a tab that already holds `existing`, or null.
  *
- * The same two rules `sheets.ts` enforces at build time and `Form.gs` before writing:
+ * The same two rules `catalog.ts` enforces at build time and `Form.gs` before writing:
  * a slug must be unique, and no slug may be a filename prefix of another, because
  * images are found by `<slug>-NN.<ext>`.
  */

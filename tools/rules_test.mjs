@@ -36,7 +36,7 @@ const kutscher = {
   active: true, updatedAt: EARLIER,
 };
 const work = { InvNr: "OB1", werkgruppe: "objekte", Titel: "Ding", updatedAt: EARLIER };
-const gruppe = { titel: "Fotografie", kurztitel: null, reihenfolge: 13 };
+const gruppe = { titel: "Fotografie", kurztitel: null, reihenfolge: 13, ordner: "fotografie" };
 const seite = { titel: "Kontakt", kategorie: "Footer", reihenfolge: 1, text: "**Hallo**\n", updatedAt: EARLIER };
 
 function auth(email, { verified = true, superAdmin = false } = {}) {
@@ -134,6 +134,8 @@ const cases = [
     "artists/andere/werkgruppen/x", { data: gruppe }),
   test("Werkgruppe order must be an integer", "DENY", as(ADMIN), "create",
     "artists/kutscher/werkgruppen/fotografie", { data: { ...gruppe, reihenfolge: "13" } }),
+  test("Werkgruppe needs an image folder", "DENY", as(ADMIN), "create",
+    "artists/kutscher/werkgruppen/fotografie", { data: { ...gruppe, ordner: "" } }),
   test("nobody deletes a Werkgruppe", "DENY", as(SUPER), "delete", "artists/kutscher/werkgruppen/objekte",
     { existing: gruppe }),
 

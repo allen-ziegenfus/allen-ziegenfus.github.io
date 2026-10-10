@@ -1,7 +1,9 @@
 # Werkverzeichnis mit Astro
 
-Static site for the Werkverzeichnis, built from a Google Sheet (the rows) and a Google
-Drive folder (the images) by `src/werkverzeichnis/sheets.ts`, rendered by Astro.
+Static site for the Werkverzeichnis, rendered by Astro. The data (Werkgruppen, works,
+pages) comes from Firestore, the Google Sheet or the offline archive, all read into
+one model (`src/werkverzeichnis/catalog.ts`); the images come from a Google Drive
+folder. `src/werkverzeichnis/build_data.ts` turns that into `public/`.
 
 - Setting up the Sheet, Drive and Google auth: `RUNBOOK-google-setup.md`
 - The editor's menu inside the Sheet: `apps-script/README.md`
@@ -11,14 +13,21 @@ Drive folder (the images) by `src/werkverzeichnis/sheets.ts`, rendered by Astro.
 ```bash
 yarn install
 
+# from Firestore (images from Drive)
+FIRESTORE_PROJECT=... FIRESTORE_DATABASE=... DRIVE_FOLDER_ID=... yarn build
+
 # from the Sheet
 SHEET_ID=... DRIVE_FOLDER_ID=... yarn build
 
 # from the offline archive, no credentials needed
-ROW_SOURCE=csv EXPORT_DIR=../werkverzeichnis-export yarn build
+ROW_SOURCE=csv IMAGE_SOURCE=csv EXPORT_DIR=../werkverzeichnis-export yarn build
 ```
 
-`yarn sheets-assets` runs just the data step and writes `public/*.json` and
+Without `ROW_SOURCE`, the first configured source wins: Firestore, then the Sheet, then
+the archive. `tools/firestore_import.ts` copies the Sheet into Firestore through the
+same model, so a Sheet build and a Firestore build of the same data are identical.
+
+`yarn data` runs just the data step and writes `public/*.json` and
 `public/images/`; `yarn build` runs that and then `astro build` into `dist/`.
 
 Locally, authenticate with `gcloud auth application-default login`. `STRICT=1` turns

@@ -1,50 +1,63 @@
 /**
- * Flat rows -> build artifacts.
+ * Catalog -> build artifacts (public/*.json and public/images/).
  *
- * The Google Sheets adapter. Rows and images arrive through `Source`, which has a
- * second implementation over the offline archive, so the risky part — flattening
- * Airtable's nested records into spreadsheet cells and resolving images by filename
- * instead of by embedded attachment object — stays provable without credentials.
- * Everything below `source` runs identically either way.
+ * The data comes from one of three places, all read into the same Catalog
+ * (catalog.ts), so the rest of this file cannot tell them apart:
  *
- *   SHEET_ID=... DRIVE_FOLDER_ID=... yarn sheets-assets    # the Sheet
- *   ROW_SOURCE=csv EXPORT_DIR=... yarn sheets-assets       # the archive
+ *   firestore   Firestore (FIRESTORE_PROJECT, FIRESTORE_DATABASE, ARTIST_ID)
+ *   google      the Sheet (SHEET_ID)
+ *   csv         the offline archive (EXPORT_DIR)
+ *
+ * ROW_SOURCE picks one; by default the first that is configured, in that order.
+ * Images are still found by filename in Drive (DRIVE_FOLDER_ID) or, with
+ * IMAGE_SOURCE=csv, in the archive.
+ *
+ *   yarn data                                         # whatever is configured
+ *   ROW_SOURCE=csv IMAGE_SOURCE=csv EXPORT_DIR=... yarn data
  */
 import * as fs from "fs";
 import * as path from "path";
 import sharp from "sharp";
 import { marked } from "marked";
-import { slugify } from "./slugify.js";
+import { firestoreCatalog, sheetCatalog, WORK_FIELDS, type Catalog } from "./catalog.js";
 import { csvSource, googleSource, type Source } from "./source.js";
 
 const PUBLIC = "./public";
 const IMAGES = path.join(PUBLIC, "images");
 
+const env = process.env;
+
 function required(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`${name} must be set to build from the Sheet`);
+  const v = env[name];
+  if (!v) throw new Error(`${name} must be set`);
   return v;
 }
 
-/**
- * The Sheet when one is configured, the archive otherwise. Setting ROW_SOURCE
- * forces the choice, which is what makes an archive-vs-Sheet diff possible.
- */
-function chooseSource(): Source {
-  const mode = process.env.ROW_SOURCE ?? (process.env.SHEET_ID ? "google" : "csv");
-  if (mode === "google") {
-    return googleSource(
-      required("SHEET_ID"),
-      required("DRIVE_FOLDER_ID"),
-      process.env.CACHE_DIR ?? ".cache/originals");
+const archive = () => csvSource(env.EXPORT_DIR ?? "../werkverzeichnis-export");
+const drive = () => googleSource(env.SHEET_ID ?? "", required("DRIVE_FOLDER_ID"),
+                                 env.CACHE_DIR ?? ".cache/originals");
+
+const ROW_SOURCE = env.ROW_SOURCE
+  ?? (env.FIRESTORE_PROJECT ? "firestore" : env.SHEET_ID ? "google" : "csv");
+
+/** Where image bytes come from: Drive, or the archive. */
+const source: Source = (env.IMAGE_SOURCE ?? (env.DRIVE_FOLDER_ID ? "google" : "csv")) === "google"
+  ? drive() : archive();
+
+async function readCatalog(): Promise<Catalog> {
+  switch (ROW_SOURCE) {
+    case "firestore":
+      return firestoreCatalog(required("FIRESTORE_PROJECT"),
+        env.FIRESTORE_DATABASE ?? "(default)", env.ARTIST_ID ?? "kutscher");
+    case "google":
+      required("SHEET_ID");
+      return sheetCatalog(drive());
+    case "csv":
+      return sheetCatalog(archive());
+    default:
+      throw new Error(`ROW_SOURCE must be firestore, google or csv, not "${ROW_SOURCE}"`);
   }
-  return csvSource(process.env.EXPORT_DIR ?? "../werkverzeichnis-export");
 }
-
-const source = chooseSource();
-
-/** A spreadsheet cannot hold null, so an empty cell must read back as absent. */
-const cell = (v: string | undefined) => (v && v.trim() !== "" ? v : undefined);
 
 const isVideo = (p: string) => p.endsWith(".webm") || p.endsWith(".mp4");
 
@@ -149,16 +162,21 @@ const IMAGE_CONCURRENCY = Number(process.env.IMAGE_CONCURRENCY ?? 8);
 async function build() {
   fs.mkdirSync(IMAGES, { recursive: true });
 
-  // Image work is queued while the rows are read and run only after the data
+  const catalog = await readCatalog();
+  problems.push(...catalog.problems);
+  console.log(`data from ${ROW_SOURCE}`);
+
+  // Image work is queued while the data is assembled and run only after the
   // checks, so a bad row fails the build in a minute rather than after every
   // image has been fetched.
   const imageJobs: (() => Promise<void>)[] = [];
 
-  const groups = (await source.rows("_Übersicht"))
-    .sort((a, b) => Number(a.Reihenfolge) - Number(b.Reihenfolge));
+  // Ties broken by slug, so every source yields the same order.
+  const bySlug = (a: { slug: string }, b: { slug: string }) => a.slug.localeCompare(b.slug);
+  const groups = [...catalog.werkgruppen].sort((a, b) => a.reihenfolge - b.reihenfolge || bySlug(a, b));
 
   // One folder listing per Werkgruppe, up front, so image lookup stays a map hit.
-  await source.warm([...groups.map(g => g.Tab), "_covers"]);
+  await source.warm([...groups.map(g => g.ordner), "_covers"]);
 
   const werkgruppen = [];
   const searchMetadata = {
@@ -167,107 +185,79 @@ async function build() {
   };
 
   for (const group of groups) {
-    const rows = await source.rows(group.Tab);
+    const works = catalog.works.filter(w => w.werkgruppe === group.slug);
     const records = [];
-    const seen = new Set<string>();
 
-    for (const row of rows) {
-      const invNr = cell(row["Inv. Nr."]);
-      if (!invNr) { problems.push(`${group.Tab}: row with no Inv. Nr.`); continue; }
-
-      // an imported spreadsheet header row: values equal their own column names
-      const headerish = Object.entries(row)
-        .filter(([k, v]) => v && v.trim() === k.trim()).length;
-      if (headerish >= 3) {
-        problems.push(`${group.Tab}: "${invNr}" looks like an imported header row`);
-        continue;
-      }
-
-      const slug = slugify(invNr, { lower: true });
-      if (seen.has(slug)) problems.push(`${group.Tab}: duplicate slug "${slug}"`);
-      seen.add(slug);
-
+    for (const work of works) {
       // Images are found by convention: <slug>-NN.<ext> in the Werkgruppe's folder.
       // Sorting by filename is what orders them, so -01 becomes the thumbnail.
-      const files = imagesFor(group.Tab, slug);
+      const files = imagesFor(group.ordner, work.slug);
       const bilder = files.length ? [...files] : ["/placeholder.png"];
       files.forEach((f, i) => imageJobs.push(async () => {
-        bilder[i] = await materialise(f, group.Tab, slug, i + 1);
+        bilder[i] = await materialise(f, group.ordner, work.slug, i + 1);
       }));
 
-      const year = Number(cell(row.Jahr));
+      const year = Number(work.Jahr);
       if (year) {
         searchMetadata.MinYear = Math.min(searchMetadata.MinYear, year);
         searchMetadata.MaxYear = Math.max(searchMetadata.MaxYear, year);
       }
-      searchMetadata.InvNrs.push(invNr);
 
       records.push({
-        InvNr: invNr,
-        InventoryNumber: invNr.replaceAll(/[^0-9]/g, ""),
-        Slug: slug,
-        WerkgruppeSlug: group.Slug,
-        Anzahl: cell(row.Anzahl), Werkgruppe: cell(row.Werkgruppe),
-        "Maße": cell(row["Maße"]), Material: cell(row.Material),
-        Beschreibung: cell(row.Beschreibung), Jahr: cell(row.Jahr),
-        Zustand: cell(row.Zustand), Standort: cell(row.Standort),
-        Titel: cell(row.Titel), Technik: cell(row.Technik),
-        Auflage: cell(row.Auflage), Signatur: cell(row.Signatur),
-        Foto: cell(row.Foto), Ausstellung: cell(row.Ausstellung),
-        Literatur: cell(row.Literatur), Bibliographie: cell(row.Bibliographie),
+        InvNr: work.InvNr,
+        InventoryNumber: work.InvNr.replaceAll(/[^0-9]/g, ""),
+        Slug: work.slug,
+        WerkgruppeSlug: group.slug,
+        ...Object.fromEntries(WORK_FIELDS.filter(f => f !== "InvNr").map(f => [f, work[f]])),
         Bilder: bilder,
         Thumbnail: "/placeholder.png",   // set once the images exist
       });
     }
 
-    records.sort((a, b) => Number(a.InventoryNumber) - Number(b.InventoryNumber));
+    records.sort((a, b) =>
+      Number(a.InventoryNumber) - Number(b.InventoryNumber) || a.Slug.localeCompare(b.Slug));
+    searchMetadata.InvNrs.push(...records.map(r => r.InvNr));
 
-    checkPrefixCollisions(records.map(r => r.Slug), group.Tab);
+    checkPrefixCollisions(records.map(r => r.Slug), group.ordner);
 
-    // an image in the folder that no row claims is a work missing from the sheet
-    const claimed = new Set(records.flatMap(r => imagesFor(group.Tab, r.Slug)));
-    const orphans = listing(group.Tab).filter(f => !claimed.has(f));
+    // an image in the folder that no work claims is a work missing from the data
+    const claimed = new Set(records.flatMap(r => imagesFor(group.ordner, r.Slug)));
+    const orphans = listing(group.ordner).filter(f => !claimed.has(f));
     if (orphans.length) {
-      problems.push(`${group.Tab}: ${orphans.length} image(s) match no row, ` +
+      problems.push(`${group.ordner}: ${orphans.length} image(s) match no work, ` +
                     `e.g. ${orphans.slice(0, 3).join(", ")}`);
     }
 
-    if (!cell(group.Bild)) problems.push(`Übersicht: no cover image for ${group.Slug}`);
+    if (!group.bild) problems.push(`no cover image for Werkgruppe ${group.slug}`);
 
     const werkgruppe = {
-      Titel: group.Titel,
-      Slug: group.Slug,
+      Titel: group.titel,
+      Slug: group.slug,
       Thumbnail: "/placeholder.png",
-      Count: rows.length,
+      Count: records.length,
       Records: records,
-      Reihenfolge: group.Reihenfolge,
-      Kurztitel: cell(group.Kurztitel),
+      Reihenfolge: group.reihenfolge,
+      Kurztitel: group.kurztitel,
     };
-    if (cell(group.Bild)) imageJobs.push(async () => {
-      werkgruppe.Thumbnail = await materialise(group.Bild, "_covers", group.Slug, 1);
+    if (group.bild) imageJobs.push(async () => {
+      werkgruppe.Thumbnail = await materialise(group.bild!, "_covers", group.slug, 1);
     });
     werkgruppen.push(werkgruppe);
     searchMetadata.Werkgruppen.push({
-      WerkgruppenSlug: group.Slug, WerkgruppenTitel: group.Titel,
+      WerkgruppenSlug: group.slug, WerkgruppenTitel: group.titel,
     });
-    console.log(`  ${group.Slug.padEnd(22)} ${records.length} works`);
+    console.log(`  ${group.slug.padEnd(22)} ${records.length} works`);
   }
 
-  const pageIndex = (await source.rows("_Seiten"))
-    .sort((a, b) => Number(a.Reihenfolge) - Number(b.Reihenfolge));
-  const pages = [];
-  for (const p of pageIndex) {
-    const rows = (await source.rows(`seite_${p.Tab.replace(/\//g, "_")}`))
-      .map(r => Object.fromEntries(Object.entries(r).map(
-        ([k, v]) => [k, k === "Text" ? marked.parse(v) : v])) as any)
-      .filter(r => r.Reihenfolge)
-      .sort((a, b) => Number(a.Reihenfolge) - Number(b.Reihenfolge));
-    pages.push({
-      Name: p.Tab, Records: rows, Slug: slugify(p.Tab, { lower: true }),
-      isTable: rows.some(r => r.Spalte1 !== undefined),
-      Reihenfolge: p.Reihenfolge, Kategorie: p.Kategorie,
-    });
-  }
+  const orphanWorks = catalog.works.filter(w => !groups.some(g => g.slug === w.werkgruppe));
+  if (orphanWorks.length) problems.push(`${orphanWorks.length} work(s) in no Werkgruppe`);
+
+  const pages = [...catalog.seiten]
+    .sort((a, b) => a.reihenfolge - b.reihenfolge || bySlug(a, b))
+    .map(p => ({
+      Name: p.titel, Slug: p.slug, Html: marked.parse(p.text),
+      Reihenfolge: p.reihenfolge, Kategorie: p.kategorie,
+    }));
 
   const works = werkgruppen.reduce((n, w) => n + w.Records.length, 0);
   console.log(`\n${werkgruppen.length} Werkgruppen, ${works} works, ${pages.length} pages`);

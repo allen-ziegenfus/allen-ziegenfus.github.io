@@ -23,6 +23,27 @@ const { page } = Astro.props;
     .page-text h3, .page-text p {
       margin-bottom: 1em;
     }
+    /* Tables (Biografie): two columns like the old grid, narrow first column. */
+    .page-text table {
+      width: 100%;
+    }
+    .page-text td {
+      padding: 0.25rem 0.5rem 0.25rem 0;
+      vertical-align: top;
+    }
+    .page-text td:first-child {
+      width: 33%;
+      white-space: nowrap;
+    }
+    @media (min-width: 768px) {
+      .page-text td:first-child {
+        width: 16.666%;
+      }
+    }
+    /* Markdown tables always have a header row; ours are left empty. */
+    .page-text thead:not(:has(th:not(:empty))) {
+      display: none;
+    }
   </style>
   <main class="my-4">
     <nav class="print:hidden">
@@ -34,22 +55,6 @@ const { page } = Astro.props;
       </ul>
     </nav>
     <h2 class="text-lg md:text-2xl py-3">{page.Name}</h2> 
-    <div>
-      {
-        page.isTable && (
-          <div class=" grid grid-cols-4 md:grid-cols-6 gap-2">
-            {page.Records.map((pagerecord) => 
-              <div>{pagerecord.Spalte1}</div>
-              <div class="col-span-3 md:col-span-5"> {pagerecord.Spalte2}</div>
-            )
-            }
-          </div>
-        )
-      }
-      {!page.isTable && (
-        page.Records.map((pagerecord) => <div class="page-text my-2" set:html={pagerecord?.Text}></div>)
-        )
-      }
-    </div>
+    <div class="page-text my-2" set:html={page.Html}></div>
   </main>
 </Layout>

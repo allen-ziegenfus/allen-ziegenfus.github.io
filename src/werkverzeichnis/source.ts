@@ -6,7 +6,7 @@
  *   google   Sheets tabs and Drive folders — what the deployed build reads
  *   csv      the offline archive on disk    — development, and the diff baseline
  *
- * `sheets.ts` cannot tell them apart, so a csv run and a google run that disagree
+ * `catalog.ts` cannot tell them apart, so a csv run and a google run that disagree
  * mean the Sheet and the archive disagree, not that two code paths drifted.
  */
 import * as fs from "fs";
