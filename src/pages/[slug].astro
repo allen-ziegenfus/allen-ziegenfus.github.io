@@ -15,7 +15,7 @@ const { werkgruppe, slug } = Astro.props;
 
 <Layout
   title={werkgruppe.Titel + " - " + import.meta.env.WEBSITE_TITLE}
-  image={werkgruppe.Thumbnail}
+  image={werkgruppe.Titelbild.src}
 >
   <main>
     <nav class="print:hidden">
@@ -37,13 +37,13 @@ const { werkgruppe, slug } = Astro.props;
               Titel: string;
               Slug: string;
               InvNr: string;
-              Thumbnail: URL;
+              Bilder: any[];
             }) => (
               <Card
                 href={"/" + werkgruppe.Slug + "/" + werk.Slug}
                 title={werk.InvNr}
                 body={werk.Titel}
-                thumbnail={werk.Thumbnail}
+                bild={werk.Bilder[0]}
               />
             )
           )

@@ -45,10 +45,26 @@ export interface Seite {
   text: string;
 }
 
+/**
+ * The web versions of one original, made by the image function (gcf/process.js)
+ * and keyed by the original's MD5. Files: <artist>/<md5>-<width>.<format> in R2.
+ */
+export interface Medium {
+  art: "bild" | "video" | "nicht unterstützt" | "fehler";
+  breite?: number;
+  hoehe?: number;
+  breiten?: number[];
+  formate?: string[];
+  vorschau?: string;
+  fehler?: string;
+}
+
 export interface Catalog {
   werkgruppen: Werkgruppe[];
   works: Work[];
   seiten: Seite[];
+  /** Web versions by fingerprint; Firestore only. */
+  medien?: Map<string, Medium>;
   /** Data problems found while reading; the build reports them. */
   problems: string[];
 }
@@ -138,8 +154,9 @@ export async function firestoreCatalog(project: string, databaseId: string, arti
   const artist = new Firestore({ projectId: project, databaseId }).collection("artists").doc(artistId);
   const problems: string[] = [];
 
-  const [wg, ws, ss] = await Promise.all(
-    ["werkgruppen", "works", "seiten"].map(c => artist.collection(c).get()));
+  const [wg, ws, ss, ms] = await Promise.all(
+    ["werkgruppen", "works", "seiten", "medien"].map(c => artist.collection(c).get()));
+  const medien = new Map(ms.docs.map(d => [d.id, d.data() as Medium]));
 
   const werkgruppen: Werkgruppe[] = wg.docs.map(d => {
     const g = d.data();
@@ -172,5 +189,5 @@ export async function firestoreCatalog(project: string, databaseId: string, arti
     return { slug: d.id, titel: s.titel, kategorie: s.kategorie, reihenfolge: s.reihenfolge, text: s.text };
   }).sort((a, b) => a.reihenfolge - b.reihenfolge);
 
-  return { werkgruppen, works, seiten, problems };
+  return { werkgruppen, works, seiten, medien, problems };
 }

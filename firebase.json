@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "source": "gcf",
+    "runtime": "nodejs22"
+  }
+}

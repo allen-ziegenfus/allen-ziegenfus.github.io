@@ -23,7 +23,7 @@ import * as fs from "fs";
 import * as path from "path";
 import sharp from "sharp";
 import { marked } from "marked";
-import { firestoreCatalog, sheetCatalog, WORK_FIELDS, type Catalog } from "./catalog.js";
+import { firestoreCatalog, sheetCatalog, WORK_FIELDS, type Catalog, type Medium } from "./catalog.js";
 import { csvSource, gcsSource, googleSource, type Source } from "./source.js";
 
 const PUBLIC = "./public";
@@ -54,8 +54,52 @@ const source: Source =
     env.BUCKET ?? `${env.FIRESTORE_PROJECT}.firebasestorage.app`, env.CACHE_DIR ?? ".cache/originals")
   : IMAGE_SOURCE === "google" ? drive() : archive();
 
-/** In gcs mode works carry their image paths; otherwise they're found by filename. */
+/**
+ * In gcs mode works carry their image paths and the image function has made
+ * the web versions, served from BILDER_URL; the build converts nothing.
+ * Otherwise images are found by filename and converted here into public/images.
+ */
 const listed = IMAGE_SOURCE === "gcs";
+const BILDER_URL = env.BILDER_URL ?? "/bilder";
+
+/**
+ * One image as the pages need it. `src` always works on its own; the srcsets
+ * (avif, webp), size and preview are there when the image function made them.
+ */
+interface Bild {
+  src: string;
+  /** ~400 px, for thumbnails and lists. */
+  klein?: string;
+  /** The largest version, for the lightbox. */
+  gross?: string;
+  breite?: number;
+  hoehe?: number;
+  avif?: string;
+  webp?: string;
+  vorschau?: string;
+  /** MIME type, for videos. */
+  video?: string;
+}
+
+const PLACEHOLDER: Bild = { src: "/placeholder.png" };
+
+const videoType = (src: string) =>
+  src.endsWith(".webm") ? "video/webm" : src.endsWith(".mp4") ? "video/mp4" : undefined;
+
+function fromMedium(md5: string, m: Medium): Bild {
+  const base = `${BILDER_URL}/${ARTIST}/${md5}`;
+  if (m.art === "video") return { src: `${base}.${m.formate![0]}`, video: `video/${m.formate![0]}` };
+  if (m.art !== "bild") return PLACEHOLDER;              // PDFs, unreadable files
+  const widths = m.breiten!;
+  const pick = (target: number) => widths.find(w => w >= target) ?? widths.at(-1)!;
+  const srcset = (fmt: string) => widths.map(w => `${base}-${w}.${fmt} ${w}w`).join(", ");
+  return {
+    src: `${base}-${pick(800)}.webp`, klein: `${base}-${pick(400)}.webp`,
+    gross: `${base}-${widths.at(-1)}.webp`, breite: m.breite, hoehe: m.hoehe,
+    avif: m.formate!.includes("avif") ? srcset("avif") : undefined, webp: srcset("webp"),
+    vorschau: m.vorschau,
+  };
+}
 
 async function readCatalog(): Promise<Catalog> {
   switch (ROW_SOURCE) {
@@ -71,8 +115,6 @@ async function readCatalog(): Promise<Catalog> {
       throw new Error(`ROW_SOURCE must be firestore, google or csv, not "${ROW_SOURCE}"`);
   }
 }
-
-const isVideo = (p: string) => p.endsWith(".webm") || p.endsWith(".mp4");
 
 /**
  * Resolve one image by filename and emit /images/<slug>-NN.webp.
@@ -191,8 +233,28 @@ async function build() {
   // One listing up front, so image lookup stays a map hit.
   await source.warm(listed ? [`artists/${ARTIST}`] : [...groups.map(g => g.ordner), "_covers"]);
 
-  /** A listed image that isn't in the bucket is a data problem, not a gap to render. */
-  const exists = (p: string) => source.listing(path.dirname(p)).includes(path.basename(p));
+  /**
+   * A listed image as a Bild. Not in the bucket, or no web versions yet, is a
+   * data problem rather than a gap to render.
+   */
+  function webBild(p: string, owner: string): Bild | null {
+    const md5 = source.fingerprint!(path.dirname(p), path.basename(p));
+    if (md5 === undefined) { problems.push(`${owner}: image ${p} not in the bucket`); return null; }
+    const m = catalog.medien?.get(md5);
+    if (!m) { problems.push(`${owner}: web versions of ${p} not made yet`); return null; }
+    if (m.art === "fehler") console.warn(`  ${owner}: ${p} unreadable: ${m.fehler}`);
+    return fromMedium(md5, m);
+  }
+
+  /** Converted here, by convention mode: src is filled in once the job has run. */
+  function localBild(file: string, dir: string, slug: string, index: number): Bild {
+    const bild: Bild = { src: "/placeholder.png" };
+    imageJobs.push(async () => {
+      bild.src = await materialise(file, dir, slug, index);
+      bild.video = videoType(bild.src);
+    });
+    return bild;
+  }
 
   const werkgruppen = [];
   const searchMetadata = {
@@ -208,13 +270,10 @@ async function build() {
       // Listed: the work's own image paths, in order. Otherwise by convention,
       // <slug>-NN.<ext> in the Werkgruppe's folder, where sorting by filename
       // is the order. Either way the first image becomes the thumbnail.
-      const files = listed
-        ? (work.images ?? []).filter(p => exists(p) || !problems.push(`${work.slug}: image ${p} not in the bucket`))
-        : imagesFor(group.ordner, work.slug).map(f => `${group.ordner}/${f}`);
-      const bilder = files.length ? [...files] : ["/placeholder.png"];
-      files.forEach((f, i) => imageJobs.push(async () => {
-        bilder[i] = await materialise(path.basename(f), path.dirname(f), work.slug, i + 1);
-      }));
+      const bilder: Bild[] = listed
+        ? (work.images ?? []).map(p => webBild(p, work.slug)).filter((b): b is Bild => b !== null)
+        : imagesFor(group.ordner, work.slug).map((f, i) => localBild(f, group.ordner, work.slug, i + 1));
+      if (!bilder.length) bilder.push(PLACEHOLDER);
 
       const year = Number(work.Jahr);
       if (year) {
@@ -249,22 +308,22 @@ async function build() {
       }
     }
 
-    const cover = listed ? group.cover : group.bild && `_covers/${group.bild}`;
+    const cover = listed ? group.cover : group.bild;
     if (!cover) problems.push(`no cover image for Werkgruppe ${group.slug}`);
-    else if (listed && !exists(cover)) problems.push(`${group.slug}: cover ${cover} not in the bucket`);
+    const titelbild = !cover ? PLACEHOLDER
+      : listed ? webBild(cover, group.slug) ?? PLACEHOLDER
+      : localBild(cover, "_covers", group.slug, 1);
 
     const werkgruppe = {
       Titel: group.titel,
       Slug: group.slug,
-      Thumbnail: "/placeholder.png",
+      Thumbnail: "/placeholder.png",   // set once the images exist
+      Titelbild: titelbild,
       Count: records.length,
       Records: records,
       Reihenfolge: group.reihenfolge,
       Kurztitel: group.kurztitel,
     };
-    if (cover) imageJobs.push(async () => {
-      werkgruppe.Thumbnail = await materialise(path.basename(cover), path.dirname(cover), group.slug, 1);
-    });
     werkgruppen.push(werkgruppe);
     searchMetadata.Werkgruppen.push({
       WerkgruppenSlug: group.slug, WerkgruppenTitel: group.titel,
@@ -295,14 +354,16 @@ async function build() {
   await pool(IMAGE_CONCURRENCY, imageJobs);
   console.log(`${imageJobs.length} images in ${Math.round((Date.now() - started) / 1000)} s`);
 
-  for (const w of werkgruppen) for (const r of w.Records) {
-    r.Thumbnail = isVideo(r.Bilder[0]) ? "/placeholder.png" : r.Bilder[0];
+  const thumbnail = (b: Bild) => b.video ? "/placeholder.png" : b.klein ?? b.src;
+  for (const w of werkgruppen) {
+    w.Thumbnail = thumbnail(w.Titelbild);
+    for (const r of w.Records) r.Thumbnail = thumbnail(r.Bilder[0]);
   }
 
   // public/images is restored from the CI cache, so the images of a removed work
-  // would otherwise stay published.
-  const used = new Set(werkgruppen.flatMap(w =>
-    [w.Thumbnail, ...w.Records.flatMap(r => r.Bilder)]).map(p => path.basename(p)));
+  // would otherwise stay published. (In gcs mode nothing in it is used at all.)
+  const used = new Set(werkgruppen.flatMap(w => [w.Titelbild, ...w.Records.flatMap(r => r.Bilder)])
+    .map(b => b.src).filter(src => src.startsWith("/images/")).map(src => path.basename(src)));
   for (const f of fs.readdirSync(IMAGES)) {
     if (!used.has(f)) fs.rmSync(path.join(IMAGES, f));
   }

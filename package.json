@@ -22,7 +22,6 @@
     "@types/react": "^18.0.21",
     "@types/react-dom": "^18.0.6",
     "astro": "^2.2.0",
-    "astro-imagetools": "^0.8.1",
     "astro-navbar": "^2.3.0",
     "dotenv": "^16.0.3",
     "firebase": "^13.0.0",

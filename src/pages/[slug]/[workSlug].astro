@@ -46,19 +46,13 @@ export async function getStaticPaths() {
 const { work, records, slug, workSlug, titel, nextLink, prevLink } =
   Astro.props;
 
-const imgs = await Promise.all(
-  work?.Bilder?.map(async (bild) => {
-    return {
-      src: bild,
-    };
-  }) || [{ src: "/placeholder.png" }]
-);
+const imgs = work.Bilder;
 ---
 
 <Layout
   title={work.Titel + " - " + import.meta.env.WEBSITE_TITLE}
   description={work.Beschreibung}
-  image={work.Thumbnail}
+  image={work.Bilder[0].video ? work.Thumbnail : work.Bilder[0].src}
 >
   <SearchNavigation client:only />
   <nav class="print:hidden">

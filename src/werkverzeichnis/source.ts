@@ -25,6 +25,8 @@ export interface Source {
   warm(dirs: string[]): Promise<void>;
   /** A local path to one image's bytes, or null when the folder has no such file. */
   original(dir: string, filename: string): Promise<string | null>;
+  /** The file's MD5 (hex), where the source knows it without downloading. */
+  fingerprint?(dir: string, filename: string): string | undefined;
 }
 
 /** RFC4180 parser. Fields may be quoted and contain commas and newlines. */
@@ -263,6 +265,9 @@ export function gcsSource(project: string, bucketName: string, cacheDir: string)
     },
     original(dir, filename) {
       return download(`${dir}/${filename}`);
+    },
+    fingerprint(dir, filename) {
+      return files.get(`${dir}/${filename}`);
     },
   };
 }
