@@ -1,9 +1,10 @@
 ---
+import site from "../../../public/site.json";
 import Layout from "../../layouts/Layout.astro";
 import AdminApp from "../../components/AdminApp.jsx";
 ---
 
-<Layout title={"Verwaltung (Firestore-Test) - " + import.meta.env.WEBSITE_TITLE} noindex>
+<Layout title={"Verwaltung (Firestore-Test) - " + site.websiteTitel} noindex>
   <main class="max-w-3xl mx-auto p-4">
     <h1 class="text-2xl mb-4">Verwaltung (Firestore-Test)</h1>
     <AdminApp client:only="react" />

@@ -1,100 +1,38 @@
 # Werkverzeichnis mit Astro
 
-Static site for the Werkverzeichnis, rendered by Astro. The data (Werkgruppen, works,
-pages) comes from Firestore, the Google Sheet or the offline archive, all read into
-one model (`src/werkverzeichnis/catalog.ts`); the images come from a Google Drive
-folder. `src/werkverzeichnis/build_data.ts` turns that into `public/`.
+Static site for the Werkverzeichnis, rendered by Astro from Firestore. One artist's
+data lives under `artists/{artist}`: the site settings on the document itself, and
+the Werkgruppen, works, pages and image records in its collections
+(`src/werkverzeichnis/catalog.ts`). `src/werkverzeichnis/build_data.ts` turns that
+into `public/*.json`, which the pages read.
 
-- Setting up the Sheet, Drive and Google auth: `RUNBOOK-google-setup.md`
-- The editor's menu inside the Sheet: `apps-script/README.md`
+Images: originals go into the project's Firebase bucket; the image function
+(`gcf/`) makes their web versions into R2, and the site serves them at `/bilder/*`
+(`functions/bilder`). The build only links to them.
 
 ## Build
 
 ```bash
 yarn install
-
-# from Firestore (images from Drive)
-FIRESTORE_PROJECT=... FIRESTORE_DATABASE=... DRIVE_FOLDER_ID=... yarn build
-
-# from the Sheet
-SHEET_ID=... DRIVE_FOLDER_ID=... yarn build
-
-# from the offline archive, no credentials needed
-ROW_SOURCE=csv IMAGE_SOURCE=csv EXPORT_DIR=../werkverzeichnis-export yarn build
+gcloud auth application-default login
+FIRESTORE_PROJECT=vollrad-werkverzeichnis FIRESTORE_DATABASE=werkverzeichnis ARTIST_ID=kutscher yarn build
 ```
 
-Without `ROW_SOURCE`, the first configured source wins: Firestore, then the Sheet, then
-the archive. `tools/firestore_import.ts` copies the Sheet into Firestore through the
-same model, so a Sheet build and a Firestore build of the same data are identical.
+`yarn data` runs just the data step; `yarn build` runs that and then `astro build`
+into `dist/`. `STRICT=1` turns data problems (an image not in the bucket, web
+versions not made yet, a work in no Werkgruppe) into a failed build.
 
-`yarn data` runs just the data step and writes `public/*.json` and
-`public/images/`; `yarn build` runs that and then `astro build` into `dist/`.
+## Editing and publishing
 
-Locally, authenticate with `gcloud auth application-default login`. `STRICT=1` turns
-data problems into a failed build instead of a published gap. The checks run before
-any image is fetched, so a data problem fails within a minute.
+- `/firestore-test/admin/`: artists, roles, Werkgruppen, pages, Veröffentlichen
+- `/firestore-test/bearbeiten/`: works
 
-Drive downloads are cached in `.cache/originals`. A cold build pulls ~3,100 files and
-~810 MB, 8 at a time (`IMAGE_CONCURRENCY`), so keep that directory and `public/images`
-between runs; CI caches both.
+Who may do what is `firestore.rules` (tested by `tools/rules_test.mjs`, deployed by
+`tools/rules_deploy.mjs`); super-admins are set with `tools/super_admin.mjs`.
 
 ## Deploying
 
-Two targets, both from GitHub Actions.
-
-**GitHub Pages** — `.github/workflows/deploy.yml`, on push to `master` plus a weekly (Monday)
-cron. This is production and it uses the `SITE` repo variable.
-
-**Cloudflare Pages** — `.github/workflows/cloudflare.yml`, manual dispatch only. It
-takes a `source_ref` input, so any branch can be built and deployed without merging it
-first, and a `site` input that overrides `SITE` for that one run.
-
-> Set `site` when dispatching, rather than changing the `SITE` variable. `SITE` is
-> shared with the production Pages build — repointing it at a `pages.dev` host would
-> put the wrong canonical URLs and sitemap into the real site.
-
-### Creating the Cloudflare project
-
-Needed once. `wrangler` is a devDependency, so `npx wrangler` works after `yarn install`.
-
-```bash
-npx wrangler login                    # or set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
-
-npx wrangler pages project create werkverzeichnis --production-branch=sheets-build
-```
-
-The hostname is assigned and need not match the project name — `werkverzeichnis`
-became `https://werkverzeichnis-c25.pages.dev/`. The workflow refers to the *project*
-name:
-
-```bash
-gh variable set CLOUDFLARE_PROJECT_NAME --body "werkverzeichnis"
-```
-
-`--production-branch` matters. The workflow deploys with `--branch=<source_ref>`, and
-Cloudflare treats any branch that is not the production branch as a *preview* deploy on
-its own URL. If production is `master` while you deploy `sheets-build`, the main
-`pages.dev` address stays empty and the deploy looks like it failed. Change it when the
-branch that should be production changes.
-
-```bash
-npx wrangler pages project list
-npx wrangler pages deployment list --project-name=werkverzeichnis
-```
-
-### Repo configuration
-
-Variables (`gh variable list`):
-
-| name | used for |
-|---|---|
-| `SITE`, `WEBSITE_TITLE`, `WEBSITE_TITLE_MOBILE_LINE_1/2`, `COPYRIGHT_AUTHOR` | site chrome |
-| `SHEET_ID`, `DRIVE_FOLDER_ID` | where the data is |
-| `PROJECT_NUMBER`, `SA` | keyless Google auth, see runbook §7–8 |
-| `OAUTH_CLIENT_ID` | Google sign-in for the editor at `/bearbeiten/` (public by design) |
-| `CLOUDFLARE_PROJECT_NAME` | which Pages project to deploy to |
-
-Secrets (`gh secret list`): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
-
-`ACCESS_TOKEN`, `BASE_ID`, `TABLE_NAME` and `WORKSPACE_ID` are leftovers from Airtable
-and can go once the migration is finished.
+Cloud Build (`cloudbuild.yaml`) builds a site and deploys it to Cloudflare Pages: on
+a push to the site's branch, and when someone presses Veröffentlichen. The
+infrastructure, including the trigger, is Terraform in `infra/` (`infra/BOOTSTRAP.md`).
+The functions are deployed with `firebase deploy --only functions`.
