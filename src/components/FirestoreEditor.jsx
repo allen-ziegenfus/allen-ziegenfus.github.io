@@ -9,7 +9,7 @@ import { artist, auth, db } from "./firebaseClient.js";
  * Firestore test (FIRESTORE.md): the /bearbeiten/ editor's edit flow against
  * Firestore instead of the Sheet. Edit only, one artist.
  *
- * Who may do what is decided by firestore.rules, not here: listed editors only,
+ * Who may do what is decided by firestore.rules, not here: the works.edit permission,
  * Inv. Nr. fixed, and every edit must carry its history entry.
  */
 
