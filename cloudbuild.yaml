@@ -1,14 +1,15 @@
-# Builds one site from Firestore and publishes it to Cloudflare Pages.
+# Baut eine Seite aus Firestore und veröffentlicht sie auf Cloudflare Pages.
 #
-# Run by the site's Cloud Build trigger (infra/gcp): on a push to its branch, and
-# when someone presses Veröffentlichen in the admin page (gcf/publish.js). The
-# trigger sets every substitution below; the titles come from the artist's
-# Firestore document. It runs as werkverzeichnis-build@, which reads Firestore
-# and the bucket listing; the Cloudflare token comes from Secret Manager.
+# Gestartet vom Cloud-Build-Trigger der Seite (infra/gcp): bei einem Push auf
+# ihren Branch und wenn jemand in der Verwaltungsseite auf Veröffentlichen
+# drückt (gcf/publish.js). Der Trigger setzt alle Substitutionen unten; die Titel
+# kommen aus dem Firestore-Dokument der Künstler:in. Läuft als
+# werkverzeichnis-build@, das Firestore und die Bucket-Liste liest; das
+# Cloudflare-Token kommt aus dem Secret Manager.
 options:
-  # Required with a user-chosen service account.
+  # Pflicht bei einem selbst gewählten Servicekonto.
   logging: CLOUD_LOGGING_ONLY
-  # A substitution the trigger doesn't set fails the build instead of going empty.
+  # Eine Substitution, die der Trigger nicht setzt, lässt den Build scheitern, statt leer zu bleiben.
   substitution_option: MUST_MATCH
 
 steps:

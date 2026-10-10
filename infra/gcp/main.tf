@@ -1,11 +1,11 @@
-# One site's Google Cloud project: Firestore, the originals bucket, the
-# service accounts and what each may do, the secrets (values are added by hand),
-# and the Cloud Build trigger. Firestore rules, the functions and the site itself
-# are deployed from the repo (tools/rules_deploy.mjs, firebase deploy, Cloud Build).
+# Das Google-Cloud-Projekt einer Seite: Firestore, der Bucket der Originale, die
+# Servicekonten und was jedes darf, die Secrets (Werte kommen von Hand) und der
+# Cloud-Build-Trigger. Firestore-Regeln, die Funktionen und die Seite selbst
+# werden aus dem Repo deployt (tools/rules_deploy.mjs, firebase deploy, Cloud Build).
 
 locals {
-  bucket = coalesce(var.bucket, "${var.project_id}.firebasestorage.app")
-  sa     = { for k, v in google_service_account.sa : k => "serviceAccount:${v.email}" }
+  bucket  = coalesce(var.bucket, "${var.projekt_id}.firebasestorage.app")
+  konten  = { for k, v in google_service_account.konto : k => "serviceAccount:${v.email}" }
 }
 
 resource "google_project_service" "api" {
@@ -18,13 +18,13 @@ resource "google_project_service" "api" {
   disable_on_destroy = false
 }
 
-resource "google_firebase_project" "this" {
+resource "google_firebase_project" "projekt" {
   provider   = google-beta
   depends_on = [google_project_service.api]
 }
 
-resource "google_firestore_database" "this" {
-  name                    = var.firestore_database
+resource "google_firestore_database" "datenbank" {
+  name                    = var.firestore_datenbank
   location_id             = var.region
   type                    = "FIRESTORE_NATIVE"
   database_edition        = "ENTERPRISE"
@@ -33,8 +33,8 @@ resource "google_firestore_database" "this" {
   depends_on              = [google_project_service.api]
 }
 
-# Originals. The image function makes the web versions into R2.
-resource "google_storage_bucket" "originals" {
+# Originale. Die Bildfunktion erzeugt daraus die Webversionen in R2.
+resource "google_storage_bucket" "originale" {
   name                        = local.bucket
   location                    = upper(var.region)
   storage_class               = "REGIONAL"
@@ -42,9 +42,9 @@ resource "google_storage_bucket" "originals" {
   lifecycle { prevent_destroy = true }
 }
 
-# --- Service accounts -------------------------------------------------------
+# --- Servicekonten -----------------------------------------------------------
 
-resource "google_service_account" "sa" {
+resource "google_service_account" "konto" {
   for_each = {
     werkverzeichnis-build = "Werkverzeichnis build"
     bilder-function       = "Bild-Funktion: Webversionen nach R2"
@@ -54,49 +54,49 @@ resource "google_service_account" "sa" {
   display_name = each.value
 }
 
-resource "google_project_iam_member" "role" {
+resource "google_project_iam_member" "rolle" {
   for_each = {
-    "build-datastore"    = ["werkverzeichnis-build", "roles/datastore.viewer"]
-    "build-logs"         = ["werkverzeichnis-build", "roles/logging.logWriter"]
-    "bilder-datastore"   = ["bilder-function", "roles/datastore.user"]
-    "bilder-events"      = ["bilder-function", "roles/eventarc.eventReceiver"]
-    "bilder-invoker"     = ["bilder-function", "roles/run.invoker"]
-    "publish-builds"     = ["publish-function", "roles/cloudbuild.builds.editor"]
-    "publish-datastore"  = ["publish-function", "roles/datastore.user"]
-    "publish-events"     = ["publish-function", "roles/eventarc.eventReceiver"]
-    "publish-invoker"    = ["publish-function", "roles/run.invoker"]
+    "build-datastore"   = ["werkverzeichnis-build", "roles/datastore.viewer"]
+    "build-logs"        = ["werkverzeichnis-build", "roles/logging.logWriter"]
+    "bilder-datastore"  = ["bilder-function", "roles/datastore.user"]
+    "bilder-events"     = ["bilder-function", "roles/eventarc.eventReceiver"]
+    "bilder-invoker"    = ["bilder-function", "roles/run.invoker"]
+    "publish-builds"    = ["publish-function", "roles/cloudbuild.builds.editor"]
+    "publish-datastore" = ["publish-function", "roles/datastore.user"]
+    "publish-events"    = ["publish-function", "roles/eventarc.eventReceiver"]
+    "publish-invoker"   = ["publish-function", "roles/run.invoker"]
   }
-  project = var.project_id
-  member  = local.sa[each.value[0]]
+  project = var.projekt_id
+  member  = local.konten[each.value[0]]
   role    = each.value[1]
 }
 
-resource "google_storage_bucket_iam_member" "read_originals" {
+resource "google_storage_bucket_iam_member" "originale_lesen" {
   for_each = toset(["werkverzeichnis-build", "bilder-function"])
-  bucket   = google_storage_bucket.originals.name
+  bucket   = google_storage_bucket.originale.name
   role     = "roles/storage.objectViewer"
-  member   = local.sa[each.key]
+  member   = local.konten[each.key]
 }
 
-# The publish function runs the trigger, whose builds run as the build account.
-resource "google_service_account_iam_member" "publish_acts_as_build" {
-  service_account_id = google_service_account.sa["werkverzeichnis-build"].name
+# Die Veröffentlichen-Funktion startet den Trigger, dessen Builds als Build-Konto laufen.
+resource "google_service_account_iam_member" "veroeffentlichen_als_build" {
+  service_account_id = google_service_account.konto["werkverzeichnis-build"].name
   role               = "roles/iam.serviceAccountUser"
-  member             = local.sa["publish-function"]
+  member             = local.konten["publish-function"]
 }
 
-# Storage events reach the image function through Pub/Sub.
+# Storage-Ereignisse erreichen die Bildfunktion über Pub/Sub.
 data "google_storage_project_service_account" "gcs" {}
 
-resource "google_project_iam_member" "gcs_events" {
-  project = var.project_id
+resource "google_project_iam_member" "gcs_ereignisse" {
+  project = var.projekt_id
   role    = "roles/pubsub.publisher"
   member  = "serviceAccount:${data.google_storage_project_service_account.gcs.email_address}"
 }
 
-# --- Secrets (values: gcloud secrets versions add, see BOOTSTRAP.md) ---------
+# --- Secrets (Werte: gcloud secrets versions add, siehe BOOTSTRAP.md) --------
 
-resource "google_secret_manager_secret" "secret" {
+resource "google_secret_manager_secret" "geheimnis" {
   for_each  = toset(["r2-access-key-id", "r2-secret-access-key", "cloudflare-pages-token"])
   secret_id = each.key
   replication {
@@ -105,50 +105,50 @@ resource "google_secret_manager_secret" "secret" {
   depends_on = [google_project_service.api]
 }
 
-resource "google_secret_manager_secret_iam_member" "reader" {
+resource "google_secret_manager_secret_iam_member" "leser" {
   for_each = {
     "r2-access-key-id"       = "bilder-function"
     "r2-secret-access-key"   = "bilder-function"
     "cloudflare-pages-token" = "werkverzeichnis-build"
   }
-  secret_id = google_secret_manager_secret.secret[each.key].id
+  secret_id = google_secret_manager_secret.geheimnis[each.key].id
   role      = "roles/secretmanager.secretAccessor"
-  member    = local.sa[each.value]
+  member    = local.konten[each.value]
 }
 
-# --- Build and publish ------------------------------------------------------
+# --- Bauen und veröffentlichen ------------------------------------------------
 
-resource "google_cloudbuildv2_repository" "site" {
+resource "google_cloudbuildv2_repository" "repo" {
   name              = replace(var.github_repo, "/", "-")
   location          = var.region
-  parent_connection = var.github_connection
+  parent_connection = var.github_verbindung
   remote_uri        = "https://github.com/${var.github_repo}.git"
 }
 
-resource "google_cloudbuild_trigger" "site" {
+resource "google_cloudbuild_trigger" "seite" {
   name            = "werkverzeichnis-${var.branch}"
-  description     = "Site from Firestore to Cloudflare Pages (push to ${var.branch}, or Veröffentlichen)"
+  description     = "Seite aus Firestore nach Cloudflare Pages (Push auf ${var.branch} oder Veröffentlichen)"
   location        = var.region
   filename        = "cloudbuild.yaml"
-  service_account = google_service_account.sa["werkverzeichnis-build"].id
+  service_account = google_service_account.konto["werkverzeichnis-build"].id
 
   repository_event_config {
-    repository = google_cloudbuildv2_repository.site.id
+    repository = google_cloudbuildv2_repository.repo.id
     push {
       branch = "^${var.branch}$"
     }
   }
 
   substitutions = {
-    _SITE                  = var.site_url
-    _ARTIST                = var.artist
-    _FIRESTORE_DATABASE    = var.firestore_database
-    _PAGES_PROJECT         = var.pages_project
-    _CLOUDFLARE_ACCOUNT_ID = var.cloudflare_account_id
+    _SITE                  = var.seiten_url
+    _ARTIST                = var.kuenstler
+    _FIRESTORE_DATABASE    = var.firestore_datenbank
+    _PAGES_PROJECT         = var.pages_projekt
+    _CLOUDFLARE_ACCOUNT_ID = var.cloudflare_konto_id
   }
 }
 
-# Cloud Build reports every build here; gcf/publish.js (buildStatus) listens.
+# Cloud Build meldet hier jeden Build; gcf/publish.js (buildStatus) hört zu.
 resource "google_pubsub_topic" "cloud_builds" {
   name       = "cloud-builds"
   depends_on = [google_project_service.api]

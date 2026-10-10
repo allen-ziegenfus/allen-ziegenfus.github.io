@@ -5,75 +5,75 @@ import {
 import { db } from "./firebaseClient.js";
 
 /**
- * Edits go live only when someone presses Veröffentlichen: that creates a
- * request, and gcf/publish.js builds and deploys the site (cloudbuild.yaml).
- * The list follows the requests live.
+ * Änderungen gehen erst online, wenn jemand auf Veröffentlichen drückt: Das legt
+ * eine Anfrage an, und gcf/publish.js baut und deployt die Seite (cloudbuild.yaml).
+ * Die Liste folgt den Anfragen live.
  */
 
 const STATUS = {
   angefordert: "angefordert", wartet: "wartet auf laufenden Build", läuft: "läuft …",
   fertig: "veröffentlicht", fehler: "fehlgeschlagen",
 };
-const COLOR = { fertig: "text-green-700", fehler: "text-red-700" };
-const button = "px-3 py-1 border rounded disabled:opacity-40";
-const when = t => t?.toDate().toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) ?? "…";
+const FARBE = { fertig: "text-green-700", fehler: "text-red-700" };
+const knopf = "px-3 py-1 border rounded disabled:opacity-40";
+const wann = t => t?.toDate().toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) ?? "…";
 
-export default function Veroeffentlichen({ artistId, me, allowed }) {
-  const [list, setList] = useState();
-  const [changes, setChanges] = useState();
-  const [error, setError] = useState();
-  const col = collection(db, "artists", artistId, "veroeffentlichungen");
+export default function Veroeffentlichen({ kuenstlerId, ich, erlaubt }) {
+  const [liste, setListe] = useState();
+  const [aenderungen, setAenderungen] = useState();
+  const [fehler, setFehler] = useState();
+  const sammlung = collection(db, "artists", kuenstlerId, "veroeffentlichungen");
 
-  useEffect(() => onSnapshot(query(col, orderBy("angefordert", "desc"), limit(5)),
-    snap => setList(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-    e => setError(e.message)), [artistId]);
+  useEffect(() => onSnapshot(query(sammlung, orderBy("angefordert", "desc"), limit(5)),
+    snap => setListe(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    e => setFehler(e.message)), [kuenstlerId]);
 
-  // Edits since the last successful build started. Werkgruppen carry no
-  // timestamp, so their changes are not counted.
-  const last = list?.find(v => v.status === "fertig")?.gestartet;
+  // Änderungen, seit der letzte erfolgreiche Build gestartet ist. Werkgruppen
+  // haben keinen Zeitstempel, ihre Änderungen zählen nicht mit.
+  const zuletzt = liste?.find(v => v.status === "fertig")?.gestartet;
   useEffect(() => {
-    if (!list) return;
-    const artist = ["artists", artistId];
-    const since = (c, field) => getCountFromServer(last
-      ? query(collection(db, ...artist, c), where(field, ">", last))
-      : collection(db, ...artist, c)).then(s => s.data().count);
-    Promise.all([since("history", "at"), since("seiten", "updatedAt")])
-      .then(([werke, seiten]) => setChanges({ werke, seiten }))
-      .catch(e => setError(e.message));
-  }, [artistId, last?.toMillis(), list?.length]);
+    if (!liste) return;
+    const pfad = ["artists", kuenstlerId];
+    const seit = (c, feld) => getCountFromServer(zuletzt
+      ? query(collection(db, ...pfad, c), where(feld, ">", zuletzt))
+      : collection(db, ...pfad, c)).then(s => s.data().count);
+    Promise.all([seit("history", "at"), seit("seiten", "updatedAt")])
+      .then(([werke, seiten]) => setAenderungen({ werke, seiten }))
+      .catch(e => setFehler(e.message));
+  }, [kuenstlerId, zuletzt?.toMillis(), liste?.length]);
 
-  const busy = list?.some(v => ["angefordert", "läuft"].includes(v.status));
+  const beschaeftigt = liste?.some(v => ["angefordert", "läuft"].includes(v.status));
 
-  async function publish() {
-    setError(undefined);
+  async function veroeffentlichen() {
+    setFehler(undefined);
     try {
-      await addDoc(col, { von: me, angefordert: serverTimestamp(), status: "angefordert" });
+      await addDoc(sammlung, { von: ich, angefordert: serverTimestamp(), status: "angefordert" });
     } catch (e) {
-      setError(e.code === "permission-denied" ? "Von den Regeln abgelehnt." : e.message);
+      setFehler(e.code === "permission-denied" ? "Von den Regeln abgelehnt." : e.message);
     }
   }
 
   return (
     <div className="pt-4 space-y-2">
       <h3 className="text-lg">Veröffentlichen</h3>
-      {changes && (
+      {aenderungen && (
         <p className="text-sm">
-          {last ? `Seit der letzten Veröffentlichung (${when(last)}): ` : "Noch nie veröffentlicht. "}
-          {changes.werke} Änderung{changes.werke === 1 ? "" : "en"} an Werken,{" "}
-          {changes.seiten} geänderte Seite{changes.seiten === 1 ? "" : "n"}.
+          {zuletzt ? `Seit der letzten Veröffentlichung (${wann(zuletzt)}): ` : "Noch nie veröffentlicht. "}
+          {aenderungen.werke} Änderung{aenderungen.werke === 1 ? "" : "en"} an Werken,{" "}
+          {aenderungen.seiten} geänderte Seite{aenderungen.seiten === 1 ? "" : "n"}.
         </p>
       )}
-      {allowed && (
-        <button className={button} onClick={publish} disabled={!list}>
-          {busy ? "Erneut veröffentlichen" : "Veröffentlichen"}
+      {erlaubt && (
+        <button className={knopf} onClick={veroeffentlichen} disabled={!liste}>
+          {beschaeftigt ? "Erneut veröffentlichen" : "Veröffentlichen"}
         </button>
       )}
-      {error && <p className="text-red-700 text-sm">{error}</p>}
+      {fehler && <p className="text-red-700 text-sm">{fehler}</p>}
       <ul className="text-sm">
-        {(list ?? []).map(v => (
+        {(liste ?? []).map(v => (
           <li key={v.id}>
-            {when(v.angefordert)} · {v.von} ·{" "}
-            <span className={COLOR[v.status] ?? ""}>{STATUS[v.status] ?? v.status}</span>
+            {wann(v.angefordert)} · {v.von} ·{" "}
+            <span className={FARBE[v.status] ?? ""}>{STATUS[v.status] ?? v.status}</span>
             {v.meldung && <span className="text-red-700"> ({v.meldung})</span>}
             {v.logUrl && <> · <a className="underline" href={v.logUrl} target="_blank" rel="noreferrer">Log</a></>}
           </li>

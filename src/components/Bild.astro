@@ -1,9 +1,10 @@
 ---
 /**
- * One image from the build data (build_data.ts → Bild): a <picture> with AVIF
- * and WebP srcsets when the image function made them, a plain <img> otherwise.
- * `sizes` tells the browser how wide the image is shown, so it can pick a width.
- * The tiny blurred preview fills the space until the image has loaded.
+ * Ein Bild aus den Build-Daten (build_data.ts → Bild): ein <picture> mit
+ * AVIF- und WebP-srcsets, wenn die Bildfunktion sie erzeugt hat, sonst ein
+ * schlichtes <img>. `sizes` sagt dem Browser, wie breit das Bild angezeigt wird,
+ * damit er eine Breite wählen kann. Die winzige unscharfe Vorschau füllt den
+ * Platz, bis das Bild geladen ist.
  */
 export interface Props {
   bild: {
@@ -13,19 +14,19 @@ export interface Props {
   alt: string;
   sizes?: string;
   class?: string;
-  eager?: boolean;
+  sofort?: boolean;
 }
-const { bild, alt, sizes = "100vw", class: className, eager = false } = Astro.props;
-const style = bild.vorschau ? `background: url(${bild.vorschau}) center / cover no-repeat` : undefined;
+const { bild, alt, sizes = "100vw", class: klasse, sofort = false } = Astro.props;
+const stil = bild.vorschau ? `background: url(${bild.vorschau}) center / cover no-repeat` : undefined;
 ---
 
 {bild.webp ? (
   <picture>
     {bild.avif && <source type="image/avif" srcset={bild.avif} sizes={sizes} />}
     <source type="image/webp" srcset={bild.webp} sizes={sizes} />
-    <img src={bild.src} alt={alt} width={bild.breite} height={bild.hoehe} class={className}
-         style={style} loading={eager ? "eager" : "lazy"} decoding="async" />
+    <img src={bild.src} alt={alt} width={bild.breite} height={bild.hoehe} class={klasse}
+         style={stil} loading={sofort ? "eager" : "lazy"} decoding="async" />
   </picture>
 ) : (
-  <img src={bild.src} alt={alt} class={className} loading={eager ? "eager" : "lazy"} decoding="async" />
+  <img src={bild.src} alt={alt} class={klasse} loading={sofort ? "eager" : "lazy"} decoding="async" />
 )}

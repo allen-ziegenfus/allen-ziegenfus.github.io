@@ -3,140 +3,141 @@ import { collection, deleteDoc, doc, getDoc, getDocs, runTransaction, serverTime
 import { slugify } from "../werkverzeichnis/slugify";
 import { db } from "./firebaseClient.js";
 
-// The editor is large; load it only once a page is opened.
+// Der Editor ist groß; erst laden, wenn eine Seite geöffnet wird.
 const MarkdownEditor = lazy(() => import("./MarkdownEditor.jsx"));
 
 /**
- * Content pages (Einführung, Impressum, …) of one artist: a list, and a form
- * with the Markdown editor. firestore.rules enforces the `seiten.edit` permission.
+ * Die Inhaltsseiten (Einführung, Impressum, …) einer Künstler:in: eine Liste und
+ * ein Formular mit dem Markdown-Editor. firestore.rules setzt die Berechtigung
+ * `seiten.bearbeiten` durch.
  */
 const KATEGORIEN = { Header: "Kopfzeile", Footer: "Fußzeile" };
-const button = "px-3 py-1 border rounded disabled:opacity-40";
-const toId = s => slugify(s, { lower: true }).replace(/[^a-z0-9-]/g, "").slice(0, 60);
-const message = e => e.code === "permission-denied" ? "Von den Regeln abgelehnt." : e.message;
-const order = (a, b) => a.kategorie.localeCompare(b.kategorie) * -1 || a.reihenfolge - b.reihenfolge;
+const knopf = "px-3 py-1 border rounded disabled:opacity-40";
+const zuKennung = s => slugify(s, { lower: true }).replace(/[^a-z0-9-]/g, "").slice(0, 60);
+const meldung = e => e.code === "permission-denied" ? "Von den Regeln abgelehnt." : e.message;
+const ordnung = (a, b) => a.kategorie.localeCompare(b.kategorie) * -1 || a.reihenfolge - b.reihenfolge;
 
-export default function Seiten({ artistId, editable }) {
-  const col = collection(db, "artists", artistId, "seiten");
-  const [pages, setPages] = useState();
-  const [open, setOpen] = useState();   // a page, or { id: "" } for a new one
-  const [error, setError] = useState();
+export default function Seiten({ kuenstlerId, bearbeitbar }) {
+  const sammlung = collection(db, "artists", kuenstlerId, "seiten");
+  const [seiten, setSeiten] = useState();
+  const [offen, setOffen] = useState();   // eine Seite, oder { id: "" } für eine neue
+  const [fehler, setFehler] = useState();
 
-  async function load() {
-    const snap = await getDocs(col);
-    setPages(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(order));
+  async function laden() {
+    const snap = await getDocs(sammlung);
+    setSeiten(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(ordnung));
   }
-  useEffect(() => { load().catch(e => setError(message(e))); }, [artistId]);
+  useEffect(() => { laden().catch(e => setFehler(meldung(e))); }, [kuenstlerId]);
 
-  if (open) return (
-    <Seite col={col} page={open} editable={editable} pages={pages}
-           onClose={() => { setOpen(undefined); load(); }} />
+  if (offen) return (
+    <Seite sammlung={sammlung} seite={offen} bearbeitbar={bearbeitbar} seiten={seiten}
+           onSchliessen={() => { setOffen(undefined); laden(); }} />
   );
 
   return (
     <div className="pt-4 space-y-2">
       <h3 className="text-lg">Seiten</h3>
-      {error && <p className="text-red-700 text-sm">{error}</p>}
+      {fehler && <p className="text-red-700 text-sm">{fehler}</p>}
       <ul className="divide-y text-sm">
-        {(pages ?? []).map(p => (
-          <li key={p.id}>
-            <button className="w-full text-left py-1 hover:bg-gray-100" onClick={() => setOpen(p)}>
-              {p.titel}
-              <span className="text-gray-600"> · {KATEGORIEN[p.kategorie]} {p.reihenfolge}</span>
+        {(seiten ?? []).map(s => (
+          <li key={s.id}>
+            <button className="w-full text-left py-1 hover:bg-gray-100" onClick={() => setOffen(s)}>
+              {s.titel}
+              <span className="text-gray-600"> · {KATEGORIEN[s.kategorie]} {s.reihenfolge}</span>
             </button>
           </li>
         ))}
       </ul>
-      {editable && <button className={button} onClick={() => setOpen({ id: "" })}>Neue Seite</button>}
+      {bearbeitbar && <button className={knopf} onClick={() => setOffen({ id: "" })}>Neue Seite</button>}
     </div>
   );
 }
 
-function Seite({ col, page, editable, pages, onClose }) {
-  const isNew = page.id === "";
-  const [draft, setDraft] = useState(() => isNew
+function Seite({ sammlung, seite, bearbeitbar, seiten, onSchliessen }) {
+  const istNeu = seite.id === "";
+  const [entwurf, setEntwurf] = useState(() => istNeu
     ? { titel: "", kategorie: "Header", text: "",
-        reihenfolge: Math.max(0, ...pages.filter(p => p.kategorie === "Header").map(p => p.reihenfolge)) + 1 }
-    : { titel: page.titel, kategorie: page.kategorie, reihenfolge: page.reihenfolge, text: page.text });
-  const [loadedAt, setLoadedAt] = useState(page.updatedAt);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState();
-  const [notice, setNotice] = useState();
-  const set = (k, v) => setDraft(d => ({ ...d, [k]: v }));
-  const id = isNew ? toId(draft.titel) : page.id;
+        reihenfolge: Math.max(0, ...seiten.filter(s => s.kategorie === "Header").map(s => s.reihenfolge)) + 1 }
+    : { titel: seite.titel, kategorie: seite.kategorie, reihenfolge: seite.reihenfolge, text: seite.text });
+  const [geladenAm, setGeladenAm] = useState(seite.updatedAt);
+  const [speichert, setSpeichert] = useState(false);
+  const [fehler, setFehler] = useState();
+  const [hinweis, setHinweis] = useState();
+  const setze = (k, v) => setEntwurf(e => ({ ...e, [k]: v }));
+  const id = istNeu ? zuKennung(entwurf.titel) : seite.id;
 
-  async function save() {
-    setSaving(true); setError(undefined); setNotice(undefined);
-    const ref = doc(col, id);
+  async function speichern() {
+    setSpeichert(true); setFehler(undefined); setHinweis(undefined);
+    const ref = doc(sammlung, id);
     try {
       await runTransaction(db, async tx => {
-        const now = await tx.get(ref);
-        if (isNew && now.exists()) throw new Error(`„${id}“ gibt es schon.`);
-        // Someone else saved since this form was opened.
-        if (!isNew && now.data()?.updatedAt?.toMillis() !== loadedAt?.toMillis()) {
+        const jetzt = await tx.get(ref);
+        if (istNeu && jetzt.exists()) throw new Error(`„${id}“ gibt es schon.`);
+        // Jemand anderes hat gespeichert, seit dieses Formular geöffnet wurde.
+        if (!istNeu && jetzt.data()?.updatedAt?.toMillis() !== geladenAm?.toMillis()) {
           throw new Error("Inzwischen von jemand anderem geändert. Bitte neu öffnen.");
         }
-        tx.set(ref, { ...draft, reihenfolge: Math.trunc(Number(draft.reihenfolge)), updatedAt: serverTimestamp() });
+        tx.set(ref, { ...entwurf, reihenfolge: Math.trunc(Number(entwurf.reihenfolge)), updatedAt: serverTimestamp() });
       });
-      if (isNew) return onClose();
-      const fresh = (await getDoc(ref)).data();
-      setLoadedAt(fresh.updatedAt);
-      setNotice("Gespeichert.");
+      if (istNeu) return onSchliessen();
+      const frisch = (await getDoc(ref)).data();
+      setGeladenAm(frisch.updatedAt);
+      setHinweis("Gespeichert.");
     } catch (e) {
-      setError(message(e));
+      setFehler(meldung(e));
     } finally {
-      setSaving(false);
+      setSpeichert(false);
     }
   }
 
-  async function remove() {
-    if (!confirm(`Seite „${page.titel}“ löschen?`)) return;
+  async function loeschen() {
+    if (!confirm(`Seite „${seite.titel}“ löschen?`)) return;
     try {
-      await deleteDoc(doc(col, page.id));
-      onClose();
+      await deleteDoc(doc(sammlung, seite.id));
+      onSchliessen();
     } catch (e) {
-      setError(message(e));
+      setFehler(meldung(e));
     }
   }
 
-  const field = "border p-1 disabled:bg-gray-100";
+  const feld = "border p-1 disabled:bg-gray-100";
   return (
     <div className="pt-4 space-y-3">
-      <button className="underline text-sm" onClick={onClose}>← Zurück zu den Seiten</button>
+      <button className="underline text-sm" onClick={onSchliessen}>← Zurück zu den Seiten</button>
       <div className="flex gap-2 flex-wrap items-end">
         <label className="flex-1 min-w-[12rem]">
           <span className="block text-sm text-gray-600">Titel</span>
-          <input className={field + " w-full"} value={draft.titel} disabled={!editable}
-                 onChange={e => set("titel", e.target.value)} />
+          <input className={feld + " w-full"} value={entwurf.titel} disabled={!bearbeitbar}
+                 onChange={e => setze("titel", e.target.value)} />
         </label>
         <label>
           <span className="block text-sm text-gray-600">Ort</span>
-          <select className={field} value={draft.kategorie} disabled={!editable}
-                  onChange={e => set("kategorie", e.target.value)}>
+          <select className={feld} value={entwurf.kategorie} disabled={!bearbeitbar}
+                  onChange={e => setze("kategorie", e.target.value)}>
             {Object.entries(KATEGORIEN).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
         </label>
         <label>
           <span className="block text-sm text-gray-600">Reihe</span>
-          <input type="number" className={field + " w-16"} value={draft.reihenfolge} disabled={!editable}
-                 onChange={e => set("reihenfolge", e.target.value)} />
+          <input type="number" className={feld + " w-16"} value={entwurf.reihenfolge} disabled={!bearbeitbar}
+                 onChange={e => setze("reihenfolge", e.target.value)} />
         </label>
       </div>
-      {isNew && <p className="text-xs text-gray-600 font-mono">/allgemein/{id || "…"}</p>}
+      {istNeu && <p className="text-xs text-gray-600 font-mono">/allgemein/{id || "…"}</p>}
 
       <Suspense fallback={<p className="text-sm text-gray-600">Editor wird geladen…</p>}>
-        <MarkdownEditor key={page.id} markdown={draft.text} readOnly={!editable}
-                        onChange={text => set("text", text)} />
+        <MarkdownEditor key={seite.id} markdown={entwurf.text} nurLesen={!bearbeitbar}
+                        onAenderung={text => setze("text", text)} />
       </Suspense>
 
-      {editable && (
+      {bearbeitbar && (
         <div className="flex gap-2 items-center">
-          <button className={button} disabled={saving || !draft.titel.trim() || !id} onClick={save}>
-            {saving ? "Speichere…" : isNew ? "Anlegen" : "Speichern"}
+          <button className={knopf} disabled={speichert || !entwurf.titel.trim() || !id} onClick={speichern}>
+            {speichert ? "Speichere…" : istNeu ? "Anlegen" : "Speichern"}
           </button>
-          {!isNew && <button className={button + " text-red-700"} onClick={remove}>Löschen</button>}
-          {notice && <span className="text-green-700 text-sm">{notice}</span>}
-          {error && <span className="text-red-700 text-sm">{error}</span>}
+          {!istNeu && <button className={knopf + " text-red-700"} onClick={loeschen}>Löschen</button>}
+          {hinweis && <span className="text-green-700 text-sm">{hinweis}</span>}
+          {fehler && <span className="text-red-700 text-sm">{fehler}</span>}
         </div>
       )}
     </div>

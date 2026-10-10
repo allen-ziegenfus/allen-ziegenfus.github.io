@@ -1,22 +1,22 @@
 ---
-import site from "../../../public/site.json";
+import einstellungen from "../../../public/site.json";
 import Layout from "../../layouts/Layout.astro";
-import pages from "../../../public/pages.json";
+import seiten from "../../../public/pages.json";
 
 export async function getStaticPaths() {
 
-  return pages.map((page) => ({
+  return seiten.map((seite) => ({
     params: {
-      slug: page.Slug,
+      slug: seite.Slug,
     },
-    props: { page },
+    props: { seite },
   }));
 }
-const { page } = Astro.props;
+const { seite } = Astro.props;
 
 ---
 
-<Layout title={page.Name + ' - ' + site.websiteTitel}>
+<Layout titel={seite.Name + ' - ' + einstellungen.websiteTitel}>
   <style is:global>
     .page-text p {
       text-indent: 1.5em;
@@ -24,7 +24,7 @@ const { page } = Astro.props;
     .page-text h3, .page-text p {
       margin-bottom: 1em;
     }
-    /* Tables (Biografie): two columns like the old grid, narrow first column. */
+    /* Tabellen (Biografie): zwei Spalten wie das alte Raster, schmale erste Spalte. */
     .page-text table {
       width: 100%;
     }
@@ -41,7 +41,7 @@ const { page } = Astro.props;
         width: 16.666%;
       }
     }
-    /* Markdown tables always have a header row; ours are left empty. */
+    /* Markdown-Tabellen haben immer eine Kopfzeile; unsere bleiben leer. */
     .page-text thead:not(:has(th:not(:empty))) {
       display: none;
     }
@@ -51,11 +51,11 @@ const { page } = Astro.props;
       <ul class="flex flex-row">
         <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
         <li>
-          <a class="text-blue-800" href={`/allgemein/${page.Slug}`}> {page.Name}</a>
+          <a class="text-blue-800" href={`/allgemein/${seite.Slug}`}> {seite.Name}</a>
         </li>
       </ul>
     </nav>
-    <h2 class="text-lg md:text-2xl py-3">{page.Name}</h2> 
-    <div class="page-text my-2" set:html={page.Html}></div>
+    <h2 class="text-lg md:text-2xl py-3">{seite.Name}</h2> 
+    <div class="page-text my-2" set:html={seite.Html}></div>
   </main>
 </Layout>

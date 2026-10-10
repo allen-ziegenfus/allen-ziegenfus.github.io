@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { doc, getFirestore } from "firebase/firestore";
 
-/** The Firestore test's Firebase app (FIRESTORE.md). Public by design. */
+/** Die Firebase-App der Verwaltung und des Editors. Absichtlich öffentlich. */
 export const app = initializeApp({
   apiKey: "AIzaSyD_wF0plrxVM7LqX6cu7Ex74T2FH9wnIjQ",
   authDomain: "vollrad-werkverzeichnis.firebaseapp.com",
@@ -13,5 +13,5 @@ export const app = initializeApp({
 });
 export const auth = getAuth(app);
 export const db = getFirestore(app, "werkverzeichnis");
-export const ARTIST = "kutscher";
-export const artist = doc(db, "artists", ARTIST);
+export const KUENSTLER = "kutscher";
+export const kuenstler = doc(db, "artists", KUENSTLER);

@@ -1,60 +1,53 @@
 ---
-import site from "../../../public/site.json";
+import einstellungen from "../../../public/site.json";
 import Layout from "../../layouts/Layout.astro";
-import ImageViewer from "../../components/ImageViewer.jsx";
-import { Eigenschaft, EigenschaftWithLink } from "../../components/Eigenschaft";
+import Bildbetrachter from "../../components/ImageViewer.jsx";
+import { Eigenschaft, EigenschaftMitLink } from "../../components/Eigenschaft";
 import werkgruppen from "../../../public/werkgruppen.json";
-import SearchNavigation from "../../components/SearchNavigation";
+import SuchNavigation from "../../components/SearchNavigation";
 
 export async function getStaticPaths() {
-  const works = [];
+  const werke = [];
   for (const werkgruppe of werkgruppen) {
-    for (const Record of werkgruppe.Records) {
-      works.push({
-        workSlug: Record.Slug,
+    for (const eintrag of werkgruppe.Records) {
+      werke.push({
+        workSlug: eintrag.Slug,
         slug: werkgruppe.Slug,
         titel: werkgruppe.Titel,
-        work: Record,
-        records: werkgruppe.Records,
+        werk: eintrag,
       });
     }
   }
-  const paths = works.map((work, index, arr) => ({
+  return werke.map((w, index, alle) => ({
     params: {
-      slug: work.slug,
-      workSlug: work.workSlug,
+      slug: w.slug,
+      workSlug: w.workSlug,
     },
     props: {
-      work: work.work,
-      records: work.records,
-      slug: work.slug,
-      workSlug: work.workSlug,
-      titel: work.titel,
-      prevLink:
+      werk: w.werk,
+      slug: w.slug,
+      workSlug: w.workSlug,
+      titel: w.titel,
+      vorher:
         index > 0
-          ? `/${arr[index - 1].slug}/${arr[index - 1].workSlug}`
+          ? `/${alle[index - 1].slug}/${alle[index - 1].workSlug}`
           : false,
-      nextLink:
-        index < arr.length - 1
-          ? `/${arr[index + 1].slug}/${arr[index + 1].workSlug}`
+      nachher:
+        index < alle.length - 1
+          ? `/${alle[index + 1].slug}/${alle[index + 1].workSlug}`
           : false,
     },
   }));
-
-  return paths;
 }
-const { work, records, slug, workSlug, titel, nextLink, prevLink } =
-  Astro.props;
-
-const imgs = work.Bilder;
+const { werk, slug, workSlug, titel, nachher, vorher } = Astro.props;
 ---
 
 <Layout
-  title={work.Titel + " - " + site.websiteTitel}
-  description={work.Beschreibung}
-  image={work.Bilder[0].video ? work.Thumbnail : work.Bilder[0].src}
+  titel={werk.Titel + " - " + einstellungen.websiteTitel}
+  beschreibung={werk.Beschreibung}
+  bild={werk.Bilder[0].video ? werk.Thumbnail : werk.Bilder[0].src}
 >
-  <SearchNavigation client:only />
+  <SuchNavigation client:only />
   <nav class="print:hidden">
     <ul class="flex flex-row flex-wrap">
       <li><a class="text-blue-800" href="/">Startseite</a>&nbsp; / &nbsp;</li>
@@ -62,56 +55,56 @@ const imgs = work.Bilder;
         <a class="text-blue-800" href={`/${slug}`}> {titel}</a>&nbsp; / &nbsp;
       </li>
       <li>
-        <a class="text-blue-800" href={`/${slug}/${workSlug}`}>{work.InvNr}</a>
+        <a class="text-blue-800" href={`/${slug}/${workSlug}`}>{werk.InvNr}</a>
       </li>
     </ul>
   </nav>
 
-  <h2 class="md:hidden text-lg md:text-2xl py-3">{work.Titel}</h2>
+  <h2 class="md:hidden text-lg md:text-2xl py-3">{werk.Titel}</h2>
   <main class="flex flex-col-reverse lg:flex-row print:flex-row">
     <div class="eigenschaften w-full lg:w-1/2">
-      <h2 class="hidden md:block text-lg md:text-2xl py-3">{work.Titel}</h2>
-      <h2 class="py-3 text-xl">Inv. Nr.: {work.InvNr}</h2>
+      <h2 class="hidden md:block text-lg md:text-2xl py-3">{werk.Titel}</h2>
+      <h2 class="py-3 text-xl">Inv. Nr.: {werk.InvNr}</h2>
       <h3 class="py-3 text-xl">Eigenschaften</h3>
-      <EigenschaftWithLink
-        title="Werkgruppe"
+      <EigenschaftMitLink
+        titel="Werkgruppe"
         href={`/${slug}`}
-        value={work.Werkgruppe}
+        wert={werk.Werkgruppe}
       />
-      <Eigenschaft title="Jahr" value={work.Jahr} />
-      <Eigenschaft title="Maße" value={work.Maße} />
-      <Eigenschaft title="Anzahl" value={work.Anzahl} />
-      <Eigenschaft title="Signatur" value={work.Signatur} />
-      <Eigenschaft title="Zustand" value={work.Zustand} />
-      <Eigenschaft title="Beschreibung" value={work.Beschreibung} />
-      <Eigenschaft title="Standort" value={work.Standort} />
-      <Eigenschaft title="Technik" value={work.Technik} />
-      <Eigenschaft title="Auflage" value={work.Auflage} />
-      <Eigenschaft title="Foto" value={work.Foto} />
-      <Eigenschaft title="Ausstellung" value={work.Ausstellung} />
-      <Eigenschaft title="Literatur" value={work.Literatur} />
-      <Eigenschaft title="Bibliographie" value={work.Bibliographie} />
+      <Eigenschaft titel="Jahr" wert={werk.Jahr} />
+      <Eigenschaft titel="Maße" wert={werk.Maße} />
+      <Eigenschaft titel="Anzahl" wert={werk.Anzahl} />
+      <Eigenschaft titel="Signatur" wert={werk.Signatur} />
+      <Eigenschaft titel="Zustand" wert={werk.Zustand} />
+      <Eigenschaft titel="Beschreibung" wert={werk.Beschreibung} />
+      <Eigenschaft titel="Standort" wert={werk.Standort} />
+      <Eigenschaft titel="Technik" wert={werk.Technik} />
+      <Eigenschaft titel="Auflage" wert={werk.Auflage} />
+      <Eigenschaft titel="Foto" wert={werk.Foto} />
+      <Eigenschaft titel="Ausstellung" wert={werk.Ausstellung} />
+      <Eigenschaft titel="Literatur" wert={werk.Literatur} />
+      <Eigenschaft titel="Bibliographie" wert={werk.Bibliographie} />
     </div>
     <div class="lg:ml-2 w-full lg:w-1/2">
       <div class="m-2 flex flex-row text-4xl justify-around">
         {
-          prevLink && (
-            <a class="print:hidden text-gray-500" href={prevLink}>
+          vorher && (
+            <a class="print:hidden text-gray-500" href={vorher}>
               {" "}
               &lt;
             </a>
           )
         }
         {
-          nextLink && (
-            <a class="print:hidden text-gray-500" href={nextLink}>
+          nachher && (
+            <a class="print:hidden text-gray-500" href={nachher}>
               {" "}
               &gt;
             </a>
           )
         }
       </div>
-      <ImageViewer client:load imgs={imgs} title={work.Titel} />
+      <Bildbetrachter client:load bilder={werk.Bilder} titel={werk.Titel} />
     </div>
   </main>
 </Layout>

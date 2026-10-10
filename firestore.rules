@@ -1,86 +1,88 @@
 rules_version = '2';
 
-// Firestore test (FIRESTORE.md). The build reads with a service account, which
-// bypasses these rules; they govern the browser editor and admin page only.
+// Der Build liest mit einem Servicekonto, für das diese Regeln nicht gelten; sie
+// regeln nur den Editor und die Verwaltungsseite im Browser.
 //
-// Roles follow Firebase's role-based access pattern
+// Die Rollen folgen Firebases Muster für rollenbasierten Zugriff
 // (firebase.google.com/docs/firestore/solutions/role-based-access):
 //
-//   who has which role   data: artists/{artist}.roles = { email: role }
-//   what a role may do   code: permissions() below, and nowhere else
+//   wer welche Rolle hat    Daten: artists/{artist}.roles = { E-Mail: Rolle }
+//   was eine Rolle darf     Code: berechtigungen() unten, und nirgends sonst
 //
-// Rules ask can(artist, permission), never for a role. Super-admins are a custom
-// claim (tools/super_admin.mjs) and may do everything. The same table is in
-// src/werkverzeichnis/permissions.js for the UI; tools/rules_test.mjs checks
-// every role × permission, so the two copies cannot drift apart.
+// Die Regeln fragen darf(kuenstler, berechtigung), nie nach einer Rolle.
+// Super-Admins sind ein Custom Claim (tools/super_admin.mjs) und dürfen alles.
+// Dieselbe Tabelle steht für die Oberfläche in src/werkverzeichnis/permissions.js;
+// tools/rules_test.mjs prüft jede Rolle × Berechtigung, damit die beiden Kopien
+// nicht auseinanderlaufen.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function permissions() {
+    function berechtigungen() {
       return {
-        "admin":  ["read", "works.edit", "werkgruppen.edit", "seiten.edit", "settings.edit", "roles.manage", "publish"],
-        "editor": ["read", "works.edit"]
+        "admin":  ["lesen", "werke.bearbeiten", "werkgruppen.bearbeiten", "seiten.bearbeiten",
+                   "einstellungen.bearbeiten", "rollen.verwalten", "veroeffentlichen"],
+        "editor": ["lesen", "werke.bearbeiten"]
       };
     }
 
-    function signedIn() {
+    function angemeldet() {
       return request.auth != null && request.auth.token.email_verified == true;
     }
 
-    function email() {
+    function emailAdresse() {
       return request.auth.token.email;
     }
 
-    function isSuperAdmin() {
-      return signedIn() && request.auth.token.get("superAdmin", false) == true;
+    function istSuperAdmin() {
+      return angemeldet() && request.auth.token.get("superAdmin", false) == true;
     }
 
-    function roleOf(artist) {
-      return get(/databases/$(database)/documents/artists/$(artist)).data.roles.get(email(), "");
+    function rolleVon(kuenstler) {
+      return get(/databases/$(database)/documents/artists/$(kuenstler)).data.roles.get(emailAdresse(), "");
     }
 
-    function can(artist, permission) {
-      return isSuperAdmin()
-        || (signedIn() && permission in permissions().get(roleOf(artist), []));
+    function darf(kuenstler, berechtigung) {
+      return istSuperAdmin()
+        || (angemeldet() && berechtigung in berechtigungen().get(rolleVon(kuenstler), []));
     }
 
-    function validArtist(d) {
+    function gueltigerKuenstler(d) {
       return d.keys().hasOnly(["titel", "websiteTitel", "titelZeile1", "titelZeile2",
                                "copyright", "roles", "active", "updatedAt"])
         && d.titel is string && d.titel.size() > 0
         && d.websiteTitel is string && d.titelZeile1 is string
         && d.titelZeile2 is string && d.copyright is string
         && d.roles is map && d.roles.size() <= 50
-        && d.roles.values().hasOnly(permissions().keys())
+        && d.roles.values().hasOnly(berechtigungen().keys())
         && d.active is bool
         && d.updatedAt == request.time;
     }
 
-    match /artists/{artist} {
-      allow get: if can(artist, "read");
-      // Super-admins list all; everyone else queries for their own email in roles.
-      allow list: if isSuperAdmin()
-        || (signedIn() && resource.data.roles[email()] in permissions().keys());
+    match /artists/{kuenstler} {
+      allow get: if darf(kuenstler, "lesen");
+      // Super-Admins listen alle; alle anderen fragen nach ihrer E-Mail in roles.
+      allow list: if istSuperAdmin()
+        || (angemeldet() && resource.data.roles[emailAdresse()] in berechtigungen().keys());
 
-      // The id becomes the site's ARTIST_ID and a Pages project name.
-      allow create: if isSuperAdmin()
-        && artist.matches("^[a-z0-9][a-z0-9-]{1,39}$")
-        && validArtist(request.resource.data);
+      // Die Kennung wird zur ARTIST_ID der Seite und zum Namen eines Pages-Projekts.
+      allow create: if istSuperAdmin()
+        && kuenstler.matches("^[a-z0-9][a-z0-9-]{1,39}$")
+        && gueltigerKuenstler(request.resource.data);
 
-      // Settings and roles are separate permissions, so a write needs whichever
-      // of the two it touches.
-      allow update: if validArtist(request.resource.data)
-        && (can(artist, "settings.edit")
+      // Einstellungen und Rollen sind getrennte Berechtigungen; ein Schreibvorgang
+      // braucht die, deren Felder er ändert.
+      allow update: if gueltigerKuenstler(request.resource.data)
+        && (darf(kuenstler, "einstellungen.bearbeiten")
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["roles", "updatedAt"]))
-        && (can(artist, "roles.manage")
+        && (darf(kuenstler, "rollen.verwalten")
             || !request.resource.data.diff(resource.data).affectedKeys().hasAny(["roles"]));
 
-      // Deactivate instead: deleting the document would orphan its subcollections.
+      // Stattdessen deaktivieren: Löschen würde die Untersammlungen verwaisen lassen.
       allow delete: if false;
     }
 
-    function validWerkgruppe(d) {
-      // cover: the cover image's path in Cloud Storage.
+    function gueltigeWerkgruppe(d) {
+      // cover: Pfad des Titelbilds in Cloud Storage.
       return d.keys().hasOnly(["titel", "kurztitel", "reihenfolge", "cover"])
         && d.titel is string && d.titel.size() > 0
         && (d.get("kurztitel", null) == null || d.kurztitel is string)
@@ -88,17 +90,17 @@ service cloud.firestore {
         && (d.get("cover", null) == null || d.cover is string);
     }
 
-    match /artists/{artist}/werkgruppen/{werkgruppe} {
-      allow read: if can(artist, "read");
-      allow create: if can(artist, "werkgruppen.edit")
+    match /artists/{kuenstler}/werkgruppen/{werkgruppe} {
+      allow read: if darf(kuenstler, "lesen");
+      allow create: if darf(kuenstler, "werkgruppen.bearbeiten")
         && werkgruppe.matches("^[a-z0-9][a-z0-9-]{0,59}$")
-        && validWerkgruppe(request.resource.data);
-      allow update: if can(artist, "werkgruppen.edit") && validWerkgruppe(request.resource.data);
-      // Not yet: its works would be left without a Werkgruppe.
+        && gueltigeWerkgruppe(request.resource.data);
+      allow update: if darf(kuenstler, "werkgruppen.bearbeiten") && gueltigeWerkgruppe(request.resource.data);
+      // Noch nicht: Ihre Werke stünden ohne Werkgruppe da.
       allow delete: if false;
     }
 
-    function validSeite(d) {
+    function gueltigeSeite(d) {
       return d.keys().hasOnly(["titel", "kategorie", "reihenfolge", "text", "updatedAt"])
         && d.titel is string && d.titel.size() > 0 && d.titel.size() <= 100
         && d.kategorie in ["Header", "Footer"]
@@ -107,46 +109,48 @@ service cloud.firestore {
         && d.updatedAt == request.time;
     }
 
-    // Content pages (Einführung, Impressum, …): Markdown, edited in the admin page.
-    match /artists/{artist}/seiten/{seite} {
-      allow read: if can(artist, "read");
-      allow create: if can(artist, "seiten.edit")
+    // Inhaltsseiten (Einführung, Impressum, …): Markdown, bearbeitet in der Verwaltungsseite.
+    match /artists/{kuenstler}/seiten/{seite} {
+      allow read: if darf(kuenstler, "lesen");
+      allow create: if darf(kuenstler, "seiten.bearbeiten")
         && seite.matches("^[a-z0-9][a-z0-9-]{0,59}$")
-        && validSeite(request.resource.data);
-      allow update: if can(artist, "seiten.edit") && validSeite(request.resource.data);
-      allow delete: if can(artist, "seiten.edit");
+        && gueltigeSeite(request.resource.data);
+      allow update: if darf(kuenstler, "seiten.bearbeiten") && gueltigeSeite(request.resource.data);
+      allow delete: if darf(kuenstler, "seiten.bearbeiten");
     }
 
-    match /artists/{artist}/works/{work} {
-      allow read: if can(artist, "read");
+    match /artists/{kuenstler}/works/{werk} {
+      allow read: if darf(kuenstler, "lesen");
 
-      // Edit only (no create/delete in the test). The Inv. Nr. and Werkgruppe
-      // are fixed, the timestamp is the server's, and the same write must add the
-      // history entry that `lastChange` points to — so no edit goes unrecorded.
-      allow update: if can(artist, "works.edit")
+      // Nur bearbeiten (kein Anlegen/Löschen). Inv. Nr. und Werkgruppe bleiben,
+      // der Zeitstempel ist der des Servers, und derselbe Schreibvorgang muss den
+      // Verlaufseintrag anlegen, auf den `lastChange` zeigt — keine Änderung
+      // bleibt unprotokolliert.
+      allow update: if darf(kuenstler, "werke.bearbeiten")
         && request.resource.data.InvNr == resource.data.InvNr
         && request.resource.data.werkgruppe == resource.data.werkgruppe
         && request.resource.data.updatedAt == request.time
-        && getAfter(/databases/$(database)/documents/artists/$(artist)/history/$(request.resource.data.lastChange)).data.work == work
-        && !exists(/databases/$(database)/documents/artists/$(artist)/history/$(request.resource.data.lastChange));
+        && getAfter(/databases/$(database)/documents/artists/$(kuenstler)/history/$(request.resource.data.lastChange)).data.work == werk
+        && !exists(/databases/$(database)/documents/artists/$(kuenstler)/history/$(request.resource.data.lastChange));
     }
 
-    // Publishing: someone who may asks for the site to be rebuilt; the function
-    // `veroeffentlichen` (gcf/publish.js) starts Cloud Build and fills in the rest.
-    match /artists/{artist}/veroeffentlichungen/{v} {
-      allow read: if can(artist, "read");
-      allow create: if can(artist, "publish")
+    // Veröffentlichen: Wer darf, fordert einen neuen Build der Seite an; die
+    // Funktion `veroeffentlichen` (gcf/publish.js) startet Cloud Build und trägt
+    // den Rest ein.
+    match /artists/{kuenstler}/veroeffentlichungen/{v} {
+      allow read: if darf(kuenstler, "lesen");
+      allow create: if darf(kuenstler, "veroeffentlichen")
         && request.resource.data.keys().hasOnly(["von", "angefordert", "status"])
-        && request.resource.data.von == email()
+        && request.resource.data.von == emailAdresse()
         && request.resource.data.angefordert == request.time
         && request.resource.data.status == "angefordert";
     }
 
-    // Append-only change log: who, when, which work. Never edited or deleted.
-    match /artists/{artist}/history/{entry} {
-      allow read: if can(artist, "read");
-      allow create: if can(artist, "works.edit")
-        && request.resource.data.by == email()
+    // Änderungsprotokoll, nur anfügen: wer, wann, welches Werk. Nie bearbeitet oder gelöscht.
+    match /artists/{kuenstler}/history/{eintrag} {
+      allow read: if darf(kuenstler, "lesen");
+      allow create: if darf(kuenstler, "werke.bearbeiten")
+        && request.resource.data.by == emailAdresse()
         && request.resource.data.at == request.time
         && request.resource.data.work is string
         && request.resource.data.changes is map;
