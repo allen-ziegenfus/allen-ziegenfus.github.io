@@ -52,3 +52,5 @@ export const bilder = onObjectFinalized({
   });
   logger.info(`${name}: ${result?.art}`, { breiten: result?.breiten });
 });
+
+export { veroeffentlichen, buildStatus } from "./publish.js";
