@@ -9,8 +9,12 @@
  *   csv         the offline archive (EXPORT_DIR)
  *
  * ROW_SOURCE picks one; by default the first that is configured, in that order.
- * Images are still found by filename in Drive (DRIVE_FOLDER_ID) or, with
- * IMAGE_SOURCE=csv, in the archive.
+ *
+ * IMAGE_SOURCE picks where the image bytes come from:
+ *
+ *   gcs      Cloud Storage (BUCKET); each work lists its images. Default with Firestore.
+ *   google   Drive (DRIVE_FOLDER_ID), found by filename convention.
+ *   csv      the archive, by filename convention.
  *
  *   yarn data                                         # whatever is configured
  *   ROW_SOURCE=csv IMAGE_SOURCE=csv EXPORT_DIR=... yarn data
@@ -20,7 +24,7 @@ import * as path from "path";
 import sharp from "sharp";
 import { marked } from "marked";
 import { firestoreCatalog, sheetCatalog, WORK_FIELDS, type Catalog } from "./catalog.js";
-import { csvSource, googleSource, type Source } from "./source.js";
+import { csvSource, gcsSource, googleSource, type Source } from "./source.js";
 
 const PUBLIC = "./public";
 const IMAGES = path.join(PUBLIC, "images");
@@ -40,15 +44,24 @@ const drive = () => googleSource(env.SHEET_ID ?? "", required("DRIVE_FOLDER_ID")
 const ROW_SOURCE = env.ROW_SOURCE
   ?? (env.FIRESTORE_PROJECT ? "firestore" : env.SHEET_ID ? "google" : "csv");
 
-/** Where image bytes come from: Drive, or the archive. */
-const source: Source = (env.IMAGE_SOURCE ?? (env.DRIVE_FOLDER_ID ? "google" : "csv")) === "google"
-  ? drive() : archive();
+const IMAGE_SOURCE = env.IMAGE_SOURCE
+  ?? (ROW_SOURCE === "firestore" ? "gcs" : env.DRIVE_FOLDER_ID ? "google" : "csv");
+const ARTIST = env.ARTIST_ID ?? "kutscher";
+
+/** Where image bytes come from. */
+const source: Source =
+  IMAGE_SOURCE === "gcs" ? gcsSource(required("FIRESTORE_PROJECT"),
+    env.BUCKET ?? `${env.FIRESTORE_PROJECT}.firebasestorage.app`, env.CACHE_DIR ?? ".cache/originals")
+  : IMAGE_SOURCE === "google" ? drive() : archive();
+
+/** In gcs mode works carry their image paths; otherwise they're found by filename. */
+const listed = IMAGE_SOURCE === "gcs";
 
 async function readCatalog(): Promise<Catalog> {
   switch (ROW_SOURCE) {
     case "firestore":
       return firestoreCatalog(required("FIRESTORE_PROJECT"),
-        env.FIRESTORE_DATABASE ?? "(default)", env.ARTIST_ID ?? "kutscher");
+        env.FIRESTORE_DATABASE ?? "(default)", ARTIST);
     case "google":
       required("SHEET_ID");
       return sheetCatalog(drive());
@@ -164,7 +177,7 @@ async function build() {
 
   const catalog = await readCatalog();
   problems.push(...catalog.problems);
-  console.log(`data from ${ROW_SOURCE}`);
+  console.log(`data from ${ROW_SOURCE}, images from ${IMAGE_SOURCE}`);
 
   // Image work is queued while the data is assembled and run only after the
   // checks, so a bad row fails the build in a minute rather than after every
@@ -175,8 +188,11 @@ async function build() {
   const bySlug = (a: { slug: string }, b: { slug: string }) => a.slug.localeCompare(b.slug);
   const groups = [...catalog.werkgruppen].sort((a, b) => a.reihenfolge - b.reihenfolge || bySlug(a, b));
 
-  // One folder listing per Werkgruppe, up front, so image lookup stays a map hit.
-  await source.warm([...groups.map(g => g.ordner), "_covers"]);
+  // One listing up front, so image lookup stays a map hit.
+  await source.warm(listed ? [`artists/${ARTIST}`] : [...groups.map(g => g.ordner), "_covers"]);
+
+  /** A listed image that isn't in the bucket is a data problem, not a gap to render. */
+  const exists = (p: string) => source.listing(path.dirname(p)).includes(path.basename(p));
 
   const werkgruppen = [];
   const searchMetadata = {
@@ -189,12 +205,15 @@ async function build() {
     const records = [];
 
     for (const work of works) {
-      // Images are found by convention: <slug>-NN.<ext> in the Werkgruppe's folder.
-      // Sorting by filename is what orders them, so -01 becomes the thumbnail.
-      const files = imagesFor(group.ordner, work.slug);
+      // Listed: the work's own image paths, in order. Otherwise by convention,
+      // <slug>-NN.<ext> in the Werkgruppe's folder, where sorting by filename
+      // is the order. Either way the first image becomes the thumbnail.
+      const files = listed
+        ? (work.images ?? []).filter(p => exists(p) || !problems.push(`${work.slug}: image ${p} not in the bucket`))
+        : imagesFor(group.ordner, work.slug).map(f => `${group.ordner}/${f}`);
       const bilder = files.length ? [...files] : ["/placeholder.png"];
       files.forEach((f, i) => imageJobs.push(async () => {
-        bilder[i] = await materialise(f, group.ordner, work.slug, i + 1);
+        bilder[i] = await materialise(path.basename(f), path.dirname(f), work.slug, i + 1);
       }));
 
       const year = Number(work.Jahr);
@@ -218,17 +237,21 @@ async function build() {
       Number(a.InventoryNumber) - Number(b.InventoryNumber) || a.Slug.localeCompare(b.Slug));
     searchMetadata.InvNrs.push(...records.map(r => r.InvNr));
 
-    checkPrefixCollisions(records.map(r => r.Slug), group.ordner);
+    if (!listed) {
+      checkPrefixCollisions(records.map(r => r.Slug), group.ordner);
 
-    // an image in the folder that no work claims is a work missing from the data
-    const claimed = new Set(records.flatMap(r => imagesFor(group.ordner, r.Slug)));
-    const orphans = listing(group.ordner).filter(f => !claimed.has(f));
-    if (orphans.length) {
-      problems.push(`${group.ordner}: ${orphans.length} image(s) match no work, ` +
-                    `e.g. ${orphans.slice(0, 3).join(", ")}`);
+      // an image in the folder that no work claims is a work missing from the data
+      const claimed = new Set(records.flatMap(r => imagesFor(group.ordner, r.Slug)));
+      const orphans = listing(group.ordner).filter(f => !claimed.has(f));
+      if (orphans.length) {
+        problems.push(`${group.ordner}: ${orphans.length} image(s) match no work, ` +
+                      `e.g. ${orphans.slice(0, 3).join(", ")}`);
+      }
     }
 
-    if (!group.bild) problems.push(`no cover image for Werkgruppe ${group.slug}`);
+    const cover = listed ? group.cover : group.bild && `_covers/${group.bild}`;
+    if (!cover) problems.push(`no cover image for Werkgruppe ${group.slug}`);
+    else if (listed && !exists(cover)) problems.push(`${group.slug}: cover ${cover} not in the bucket`);
 
     const werkgruppe = {
       Titel: group.titel,
@@ -239,8 +262,8 @@ async function build() {
       Reihenfolge: group.reihenfolge,
       Kurztitel: group.kurztitel,
     };
-    if (group.bild) imageJobs.push(async () => {
-      werkgruppe.Thumbnail = await materialise(group.bild!, "_covers", group.slug, 1);
+    if (cover) imageJobs.push(async () => {
+      werkgruppe.Thumbnail = await materialise(path.basename(cover), path.dirname(cover), group.slug, 1);
     });
     werkgruppen.push(werkgruppe);
     searchMetadata.Werkgruppen.push({

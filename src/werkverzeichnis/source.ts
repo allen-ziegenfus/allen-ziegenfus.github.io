@@ -1,10 +1,11 @@
 /**
  * Where flat rows and image bytes come from.
  *
- * Two implementations behind one interface:
+ * Three implementations behind one interface:
  *
- *   google   Sheets tabs and Drive folders — what the deployed build reads
+ *   google   Sheets tabs and Drive folders
  *   csv      the offline archive on disk    — development, and the diff baseline
+ *   gcs      Cloud Storage, images only     — the Firestore build
  *
  * `catalog.ts` cannot tell them apart, so a csv run and a google run that disagree
  * mean the Sheet and the archive disagree, not that two code paths drifted.
@@ -213,6 +214,55 @@ export function googleSource(sheetId: string, folderId: string, cacheDir: string
       const key = `${dir}/${filename}`;
       if (!inflight.has(key)) inflight.set(key, download(dir, filename));
       return inflight.get(key)!;
+    },
+  };
+}
+
+/**
+ * Images in Cloud Storage, for the Firestore build: works list their own object
+ * paths, so a "folder" here is an object path's directory and `warm` lists
+ * everything under the given prefixes once. Downloads are cached like Drive's,
+ * keyed by the object's MD5 so a replaced image is fetched again.
+ */
+export function gcsSource(project: string, bucketName: string, cacheDir: string): Source {
+  const files = new Map<string, string>();      // object path -> md5 (hex)
+  let bucket: any;
+
+  async function connect() {
+    if (!bucket) {
+      const { Storage } = await import("@google-cloud/storage");
+      bucket = new Storage({ projectId: project }).bucket(bucketName);
+    }
+    return bucket;
+  }
+
+  async function download(name: string): Promise<string | null> {
+    const md5 = files.get(name);
+    if (md5 === undefined) return null;
+    const dest = path.join(cacheDir, path.dirname(name), `${md5}-${path.basename(name)}`);
+    if (fs.existsSync(dest) && fs.statSync(dest).size > 0) return dest;
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    await (await connect()).file(name).download({ destination: dest });
+    return dest;
+  }
+
+  return {
+    async rows() {
+      throw new Error("gcs holds images only; rows come from Firestore");
+    },
+    listing(dir) {
+      return [...files.keys()].filter(n => path.dirname(n) === dir).map(n => path.basename(n)).sort();
+    },
+    async warm(prefixes) {
+      for (const prefix of prefixes) {
+        const [objects] = await (await connect()).getFiles({ prefix: prefix + "/" });
+        for (const o of objects) {
+          files.set(o.name, Buffer.from(o.metadata.md5Hash ?? "", "base64").toString("hex"));
+        }
+      }
+    },
+    original(dir, filename) {
+      return download(`${dir}/${filename}`);
     },
   };
 }

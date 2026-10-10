@@ -54,21 +54,28 @@ writer.onWriteError(e => {
 const put = (ref: FirebaseFirestore.DocumentReference, data: object, replace: boolean) =>
   (replace ? writer.set(ref, data) : writer.create(ref, data)).catch(() => {});
 
+// Image paths (tools/gcs_upload.ts) aren't in the Sheet; an overwrite keeps them.
+const keep = async (collection: string, field: string) => new Map((await artist.collection(collection).get())
+  .docs.filter(d => d.get(field) !== undefined).map(d => [d.id, { [field]: d.get(field) }]));
+const covers = await keep("werkgruppen", "cover");
+const images = await keep("works", "images");
+
 for (const { slug, ...g } of catalog.werkgruppen) {
   put(artist.collection("werkgruppen").doc(slug),
-    { ...g, kurztitel: g.kurztitel ?? null, bild: g.bild ?? null }, overwrite);
+    { ...g, kurztitel: g.kurztitel ?? null, bild: g.bild ?? null, ...covers.get(slug) }, overwrite);
 }
 for (const { slug, ...w } of catalog.works) {
-  put(artist.collection("works").doc(slug), { ...w, updatedAt: FieldValue.serverTimestamp() }, overwrite);
+  put(artist.collection("works").doc(slug),
+    { ...w, ...images.get(slug), updatedAt: FieldValue.serverTimestamp() }, overwrite);
 }
 for (const { slug, ...s } of catalog.seiten) {
   put(artist.collection("seiten").doc(slug), { ...s, updatedAt: FieldValue.serverTimestamp() }, overwritePages);
 }
 
 if (overwrite) {
-  const keep = new Set(catalog.works.map(w => w.slug));
+  const inSheet = new Set(catalog.works.map(w => w.slug));
   for (const d of (await artist.collection("works").get()).docs) {
-    if (!keep.has(d.id)) { writer.delete(d.ref).catch(() => {}); count.deleted++; console.log(`  delete work ${d.id}`); }
+    if (!inSheet.has(d.id)) { writer.delete(d.ref).catch(() => {}); count.deleted++; console.log(`  delete work ${d.id}`); }
   }
 }
 await writer.close();

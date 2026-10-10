@@ -19,6 +19,8 @@ export interface Werkgruppe {
   ordner: string;
   /** Cover image filename in the _covers folder. */
   bild?: string;
+  /** Cover image in Cloud Storage (object path), once uploaded. */
+  cover?: string;
 }
 
 /** The fields of a work, in the order the site's JSON has always had them. */
@@ -28,8 +30,11 @@ export const WORK_FIELDS = [
   "Bibliographie",
 ] as const;
 
-export type Work = { slug: string; werkgruppe: string; InvNr: string } &
-  Partial<Record<(typeof WORK_FIELDS)[number], string>>;
+export type Work = {
+  slug: string; werkgruppe: string; InvNr: string;
+  /** Images in Cloud Storage (object paths), in order; the first is the thumbnail. */
+  images?: string[];
+} & Partial<Record<(typeof WORK_FIELDS)[number], string>>;
 
 export interface Seite {
   slug: string;
@@ -141,6 +146,7 @@ export async function firestoreCatalog(project: string, databaseId: string, arti
     return {
       slug: d.id, titel: g.titel, kurztitel: g.kurztitel ?? undefined,
       reihenfolge: g.reihenfolge, ordner: g.ordner, bild: g.bild ?? undefined,
+      cover: g.cover ?? undefined,
     };
   }).sort((a, b) => a.reihenfolge - b.reihenfolge);
 
@@ -158,7 +164,7 @@ export async function firestoreCatalog(project: string, databaseId: string, arti
     const fields = Object.fromEntries(WORK_FIELDS
       .map(f => [f, cell(w[f])])
       .filter(([, v]) => v !== undefined));
-    works.push({ ...fields, InvNr: w.InvNr, slug: d.id, werkgruppe: w.werkgruppe });
+    works.push({ ...fields, InvNr: w.InvNr, slug: d.id, werkgruppe: w.werkgruppe, images: w.images });
   }
 
   const seiten: Seite[] = ss.docs.map(d => {
