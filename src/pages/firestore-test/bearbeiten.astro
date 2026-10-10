@@ -1,9 +1,10 @@
 ---
+import site from "../../../public/site.json";
 import Layout from "../../layouts/Layout.astro";
 import FirestoreEditor from "../../components/FirestoreEditor.jsx";
 ---
 
-<Layout title={"Firestore-Editor (Test) - " + import.meta.env.WEBSITE_TITLE} noindex>
+<Layout title={"Firestore-Editor (Test) - " + site.websiteTitel} noindex>
   <main class="max-w-3xl mx-auto p-4">
     <h1 class="text-2xl mb-4">Werkverzeichnis bearbeiten (Firestore-Test)</h1>
     <FirestoreEditor client:only="react" />
