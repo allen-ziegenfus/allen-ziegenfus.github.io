@@ -1,30 +1,17 @@
 /**
- * What the browser remembers about the editor, shared by /bearbeiten/ and the
- * "Bearbeiten" link on work pages.
- *
- * - localStorage flag: this browser has signed into the editor before. Only decides
- *   whether the link is shown; it proves nothing.
- * - sessionStorage token: the Google access token and its expiry, so moving between
- *   pages in one tab doesn't mean signing in again. Gone when the tab closes, and
- *   useless after an hour.
+ * What the browser remembers about the editor, shared by /bearbeiten/, the
+ * "Bearbeiten" link on work pages and the footer: the Google access token and
+ * its expiry, in sessionStorage, so moving between pages in one tab doesn't mean
+ * signing in again. Gone when the tab closes, and useless after an hour.
  *
  * Storage can be unavailable (private windows, blocked site data), so every access
  * is wrapped and failure just means "not remembered".
  */
 
-const FLAG = "werkverzeichnis.editor";
 // Also read by the footer script in Layout.astro — keep the key and shape in step.
 const TOKEN = "werkverzeichnis.token";
 
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
-
-export function isEditorBrowser() {
-  try { return localStorage.getItem(FLAG) === "1"; } catch { return false; }
-}
-
-export function markEditorBrowser() {
-  try { localStorage.setItem(FLAG, "1"); } catch {}
-}
 
 export function saveToken(res) {
   try {
