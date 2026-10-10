@@ -7,10 +7,12 @@
  * change: a replaced original gets new names, so a published site keeps
  * showing what it was built with until the next deploy (see FIRESTORE.md).
  *
- *   R2:        <artist>/<md5>-<width>.avif|webp   images
+ *   R2:        <artist>/<md5>-<width>.avif|webp   images, and PDFs' first pages
  *              <artist>/<md5>.<ext>               videos, copied as is
  *   Firestore: artists/<artist>/medien/<md5>      width, height, widths, formats, preview
  */
+import { createRequire } from "module";
+import path from "path";
 import sharp from "sharp";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
@@ -22,6 +24,10 @@ export const WIDTHS = [400, 800, 1200, 2000];
 
 const IMAGE = /\.(jpe?g|png|webp|gif|tiff?)$/i;
 const VIDEO = /\.(mp4|webm)$/i;
+const PDF = /\.pdf$/i;
+
+/** Long side of a PDF's first page as rendered, before the usual widths are made. */
+const PDF_SIZE = 2000;
 const ORIGINAL = /^artists\/([^/]+)\/(works|werkgruppen)\/[^/]+\/[^/]+$/;
 
 /** Which originals we process, and for which artist; null for anything else. */
@@ -87,8 +93,43 @@ async function render(name, bytes, base, copyright) {
       outputs: [{ key: `${base}.${ext}`, body: bytes, type: ext === "mp4" ? "video/mp4" : "video/webm" }],
     };
   }
-  if (!IMAGE.test(name)) return { data: { art: "nicht unterstützt" }, outputs: [] };  // PDFs etc.
+  if (PDF.test(name)) {
+    // The first page stands for the document (scanned prints, mostly).
+    const { png, seiten } = await pdfFirstPage(bytes);
+    const result = await renderImage(png, base, copyright);
+    return { ...result, data: { ...result.data, quelle: "pdf", seiten } };
+  }
+  if (!IMAGE.test(name)) return { data: { art: "nicht unterstützt" }, outputs: [] };
+  return renderImage(bytes, base, copyright);
+}
 
+/** First page of a PDF as a PNG, PDF_SIZE on its long side. pdf.js, loaded only when needed. */
+async function pdfFirstPage(bytes) {
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const { createCanvas } = await import("@napi-rs/canvas");
+  const fonts = path.join(path.dirname(createRequire(import.meta.url).resolve("pdfjs-dist/package.json")),
+    "standard_fonts") + path.sep;
+  const task = getDocument({
+    data: new Uint8Array(bytes), isEvalSupported: false, verbosity: 0, standardFontDataUrl: fonts,
+  });
+  try {
+    const pdf = await task.promise;
+    const page = await pdf.getPage(1);
+    const natural = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: PDF_SIZE / Math.max(natural.width, natural.height) });
+    const canvas = createCanvas(Math.round(viewport.width), Math.round(viewport.height));
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "white";                       // PDFs assume paper, not transparency
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    return { png: canvas.toBuffer("image/png"), seiten: pdf.numPages };
+  } finally {
+    await task.destroy();
+  }
+}
+
+/** Widths × formats for one raster image, plus its record. */
+async function renderImage(bytes, base, copyright) {
   // Animated GIF/WebP stay animated, as WebP only (sharp can't animate AVIF).
   const meta = await sharp(bytes, { animated: true }).metadata();
   const animated = (meta.pages ?? 1) > 1;
