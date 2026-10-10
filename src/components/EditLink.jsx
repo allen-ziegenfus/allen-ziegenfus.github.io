@@ -1,8 +1,11 @@
-import { isEditorBrowser } from "./editorAuth.js";
+import { loadToken } from "./editorAuth.js";
 
-/** "Bearbeiten", shown only in a browser that has used the editor. Not access control. */
+/**
+ * "Bearbeiten", shown only while signed into the editor in this tab (the same
+ * check as the footer). Display only: Google decides what the token may do.
+ */
 export default function EditLink({ gruppe, invNr }) {
-  if (!isEditorBrowser()) return null;
+  if (!loadToken()) return null;
   const href = `/bearbeiten/?${new URLSearchParams({ gruppe, werk: invNr })}`;
   return <a className="print:hidden text-blue-800" href={href}>Bearbeiten</a>;
 }

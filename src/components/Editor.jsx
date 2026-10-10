@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { slugify } from "../werkverzeichnis/slugify";
 import { invNrProblem } from "../werkverzeichnis/validate";
 import {
-  DRIVE_SCOPE, clearToken, loadToken, markEditorBrowser, saveProfile, saveToken,
+  DRIVE_SCOPE, clearToken, loadToken, saveProfile, saveToken,
 } from "./editorAuth.js";
 
 /**
@@ -157,7 +157,6 @@ function SignedInEditor() {
           .sort((a, b) => Number(a.Reihenfolge) - Number(b.Reihenfolge));
         setGroups(gs);
         setState("ready");
-        markEditorBrowser();
 
         const p = new URLSearchParams(location.search);
         const g = gs.find(g => g.Slug === p.get("gruppe"));
