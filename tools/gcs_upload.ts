@@ -2,7 +2,7 @@
  * Upload the archive's original images to Cloud Storage and record them in
  * Firestore, so the Firestore build no longer needs Drive.
  *
- *   node --no-warnings --loader ts-node/esm tools/gcs_upload.ts [--dry-run]
+ *   node --no-warnings --loader ts-node/esm tools/gcs_upload.ts [--dry-run] [--relist]
  *
  * Which works exist comes from Firestore; their images are found in the archive
  * (EXPORT_DIR/originals/<ordner>/) by the old filename convention, <slug>-NN.ext.
@@ -12,7 +12,10 @@
  *   artists/<ARTIST>/werkgruppen/<slug>/cover.ext   -> werkgruppen/<slug>.cover
  *
  * Files already in the bucket with the same MD5 are skipped, so a re-run only
- * uploads what changed. Runs with your gcloud application-default credentials.
+ * uploads what changed. A work that already has an image list keeps it, since
+ * lists are edited in Firestore now (e.g. ob2201's certificate was taken off);
+ * --relist replaces them with what the archive has.
+ * Runs with your gcloud application-default credentials.
  */
 import * as crypto from "crypto";
 import * as fs from "fs";
@@ -28,6 +31,7 @@ const BUCKET = env.BUCKET ?? `${PROJECT}.firebasestorage.app`;
 const ARTIST = env.ARTIST_ID ?? "kutscher";
 const ORIGINALS = path.join(env.EXPORT_DIR ?? "../werkverzeichnis-export", "originals");
 const dryRun = process.argv.includes("--dry-run");
+const relist = process.argv.includes("--relist");
 
 const TYPES: Record<string, string> = {
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
@@ -105,6 +109,7 @@ const writer = db.bulkWriter();
 let changed = 0;
 for (const w of catalog.works) {
   const images = workImages.get(w.slug) ?? [];
+  if (w.images !== undefined && !relist) continue;
   if (JSON.stringify(images) !== JSON.stringify(w.images ?? [])) {
     writer.update(artist.collection("works").doc(w.slug), { images });
     changed++;
