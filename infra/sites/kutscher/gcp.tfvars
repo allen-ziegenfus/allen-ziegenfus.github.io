@@ -1,0 +1,8 @@
+project_id            = "vollrad-werkverzeichnis"
+artist                = "kutscher"
+github_connection     = "Werkverzeichnis"
+github_repo           = "allen-ziegenfus/allen-ziegenfus.github.io"
+branch                = "firestore-build"
+site_url              = "https://firestore-build.werkverzeichnis-c25.pages.dev"
+pages_project         = "werkverzeichnis"
+cloudflare_account_id = "cf3fa9a06c8f2e93e24fa3eeaa80b783"
