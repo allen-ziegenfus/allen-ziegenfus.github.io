@@ -81,6 +81,8 @@ const probes = {
     { data: { ...kutscher, titel: "Neu", updatedAt: NOW }, existing: kutscher }),
   "roles.manage": who => test(`${who} roles.manage`, null, as(who), "update", "artists/kutscher",
     { data: { ...kutscher, roles: { ...kutscher.roles, [STRANGER]: "editor" }, updatedAt: NOW }, existing: kutscher }),
+  "publish": who => test(`${who} publish`, null, as(who), "create", "artists/kutscher/veroeffentlichungen/v1",
+    { data: { von: who, angefordert: NOW, status: "angefordert" } }),
 };
 
 const allPermissions = [...new Set(Object.values(PERMISSIONS).flat())];
@@ -148,6 +150,15 @@ const cases = [
     { data: { ...work, InvNr: "OB2", updatedAt: NOW, lastChange: "h1" }, existing: work }),
   test("edit without history entry", "DENY", as(EDITOR), "update", "artists/kutscher/works/ob1",
     { data: { ...work, Titel: "Neu", updatedAt: NOW, lastChange: "h2" }, existing: work }),
+  test("publish request in someone else's name", "DENY", as(ADMIN), "create",
+    "artists/kutscher/veroeffentlichungen/v1", { data: { von: EDITOR, angefordert: NOW, status: "angefordert" } }),
+  test("publish request with its own status", "DENY", as(ADMIN), "create",
+    "artists/kutscher/veroeffentlichungen/v1", { data: { von: ADMIN, angefordert: NOW, status: "fertig" } }),
+  test("nobody updates a publication", "DENY", as(SUPER), "update", "artists/kutscher/veroeffentlichungen/v1",
+    { data: { von: SUPER, angefordert: NOW, status: "fertig" },
+      existing: { von: SUPER, angefordert: EARLIER, status: "angefordert" } }),
+  test("editor reads publications", "ALLOW", as(EDITOR), "get", "artists/kutscher/veroeffentlichungen/v1",
+    { existing: { von: ADMIN, angefordert: EARLIER, status: "fertig" } }),
   test("history entry in someone else's name", "DENY", as(EDITOR), "create", "artists/kutscher/history/h1",
     { data: { work: "ob1", by: ADMIN, at: NOW, changes: {} } }),
 ];
