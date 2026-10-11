@@ -1,201 +1,202 @@
 /**
- * Firestore -> build artifacts (public/*.json).
+ * Firestore -> Dateien für den Build (public/*.json).
  *
  *   FIRESTORE_PROJECT=... FIRESTORE_DATABASE=... ARTIST_ID=... yarn data
  *
- * Works list their images as paths in the originals bucket (BUCKET, by default
- * the project's Firebase bucket). The image function has already made their web
- * versions, served from BILDER_URL; the build only links to them, by the
- * original's MD5, which the bucket listing gives without downloading anything.
+ * Werke führen ihre Bilder als Pfade im Bucket der Originale (BUCKET, sonst der
+ * Firebase-Bucket des Projekts). Die Bildfunktion hat deren Webversionen schon
+ * erzeugt, ausgeliefert unter BILDER_URL; der Build verlinkt sie nur, über die
+ * MD5 des Originals, die die Bucket-Liste liefert, ohne etwas herunterzuladen.
  */
 import * as fs from "fs";
 import { marked } from "marked";
 import { Storage } from "@google-cloud/storage";
-import { firestoreCatalog, WORK_FIELDS, type Medium } from "./catalog.js";
+import { firestoreKatalog, WERK_FELDER, type Medium } from "./catalog.js";
 
 const PUBLIC = "./public";
 
 const env = process.env;
 
-function required(name: string): string {
+function pflicht(name: string): string {
   const v = env[name];
   if (!v) throw new Error(`${name} must be set`);
   return v;
 }
 
-const PROJECT = required("FIRESTORE_PROJECT");
-const DATABASE = env.FIRESTORE_DATABASE ?? "werkverzeichnis";
-const ARTIST = required("ARTIST_ID");
-const BUCKET = env.BUCKET ?? `${PROJECT}.firebasestorage.app`;
+const PROJEKT = pflicht("FIRESTORE_PROJECT");
+const DATENBANK = env.FIRESTORE_DATABASE ?? "werkverzeichnis";
+const KUENSTLER = pflicht("ARTIST_ID");
+const BUCKET = env.BUCKET ?? `${PROJEKT}.firebasestorage.app`;
 const BILDER_URL = env.BILDER_URL ?? "/bilder";
 
 /**
- * One image as the pages need it. `src` always works on its own; the srcsets
- * (avif, webp), size and preview are there when the image function made them.
+ * Ein Bild, wie die Seiten es brauchen. `src` funktioniert immer allein; die
+ * srcsets (avif, webp), Größe und Vorschau gibt es, wenn die Bildfunktion sie
+ * erzeugt hat.
  */
 interface Bild {
   src: string;
-  /** ~400 px, for thumbnails and lists. */
+  /** ~400 px, für Vorschaubilder und Listen. */
   klein?: string;
-  /** The largest version, for the lightbox. */
+  /** Die größte Version, für die Lightbox. */
   gross?: string;
   breite?: number;
   hoehe?: number;
   avif?: string;
   webp?: string;
   vorschau?: string;
-  /** MIME type, for videos. */
+  /** MIME-Typ, bei Videos. */
   video?: string;
 }
 
-const PLACEHOLDER: Bild = { src: "/placeholder.png" };
+const PLATZHALTER: Bild = { src: "/placeholder.png" };
 
-function fromMedium(md5: string, m: Medium): Bild {
-  const base = `${BILDER_URL}/${ARTIST}/${md5}`;
-  if (m.art === "video") return { src: `${base}.${m.formate![0]}`, video: `video/${m.formate![0]}` };
-  if (m.art !== "bild") return PLACEHOLDER;              // PDFs, unreadable files
-  const widths = m.breiten!;
-  const pick = (target: number) => widths.find(w => w >= target) ?? widths.at(-1)!;
-  const srcset = (fmt: string) => widths.map(w => `${base}-${w}.${fmt} ${w}w`).join(", ");
+function ausMedium(md5: string, m: Medium): Bild {
+  const basis = `${BILDER_URL}/${KUENSTLER}/${md5}`;
+  if (m.art === "video") return { src: `${basis}.${m.formate![0]}`, video: `video/${m.formate![0]}` };
+  if (m.art !== "bild") return PLATZHALTER;              // nicht unterstützt, unlesbar
+  const breiten = m.breiten!;
+  const waehle = (ziel: number) => breiten.find(b => b >= ziel) ?? breiten.at(-1)!;
+  const srcset = (format: string) => breiten.map(b => `${basis}-${b}.${format} ${b}w`).join(", ");
   return {
-    src: `${base}-${pick(800)}.webp`, klein: `${base}-${pick(400)}.webp`,
-    gross: `${base}-${widths.at(-1)}.webp`, breite: m.breite, hoehe: m.hoehe,
+    src: `${basis}-${waehle(800)}.webp`, klein: `${basis}-${waehle(400)}.webp`,
+    gross: `${basis}-${breiten.at(-1)}.webp`, breite: m.breite, hoehe: m.hoehe,
     avif: m.formate!.includes("avif") ? srcset("avif") : undefined, webp: srcset("webp"),
     vorschau: m.vorschau,
   };
 }
 
-function expandYears(jahr?: string): number[] {
+function jahreAusloesen(jahr?: string): number[] {
   if (!jahr) return [];
-  const years: number[] = [];
-  for (const part of String(jahr).split(",")) {
-    const [min, max] = part.split("-").map(s => Number(s.trim()));
-    if (!min) continue;
-    if (!max) { years.push(min); continue; }
-    for (let y = min; y <= max; y++) years.push(y);
+  const jahre: number[] = [];
+  for (const teil of String(jahr).split(",")) {
+    const [von, bis] = teil.split("-").map(s => Number(s.trim()));
+    if (!von) continue;
+    if (!bis) { jahre.push(von); continue; }
+    for (let j = von; j <= bis; j++) jahre.push(j);
   }
-  return years;
+  return jahre;
 }
 
-/** The artist's originals: object path -> MD5 (hex). */
-async function fingerprints(): Promise<Map<string, string>> {
-  const [files] = await new Storage({ projectId: PROJECT }).bucket(BUCKET)
-    .getFiles({ prefix: `artists/${ARTIST}/` });
-  return new Map(files.map(f => [f.name, Buffer.from(f.metadata.md5Hash!, "base64").toString("hex")]));
+/** Die Originale der Künstler:in: Objektpfad -> MD5 (hex). */
+async function fingerabdruecke(): Promise<Map<string, string>> {
+  const [dateien] = await new Storage({ projectId: PROJEKT }).bucket(BUCKET)
+    .getFiles({ prefix: `artists/${KUENSTLER}/` });
+  return new Map(dateien.map(d => [d.name, Buffer.from(d.metadata.md5Hash!, "base64").toString("hex")]));
 }
 
-/** Validation is the price of a schemaless source. Fail loud, never render a gap. */
-const problems: string[] = [];
+/** Validierung ist der Preis einer schemalosen Quelle. Laut scheitern, nie eine Lücke zeigen. */
+const probleme: string[] = [];
 
-async function build() {
-  const [catalog, md5s] = await Promise.all([firestoreCatalog(PROJECT, DATABASE, ARTIST), fingerprints()]);
-  problems.push(...catalog.problems);
+async function bauen() {
+  const [katalog, md5s] = await Promise.all([firestoreKatalog(PROJEKT, DATENBANK, KUENSTLER), fingerabdruecke()]);
+  probleme.push(...katalog.probleme);
 
   /**
-   * A listed image as a Bild. Not in the bucket, or no web versions yet, is a
-   * data problem rather than a gap to render.
+   * Ein gelistetes Bild als Bild. Fehlt es im Bucket oder gibt es noch keine
+   * Webversionen, ist das ein Datenproblem, keine Lücke zum Anzeigen.
    */
-  function webBild(p: string, owner: string): Bild | null {
-    const md5 = md5s.get(p);
-    if (md5 === undefined) { problems.push(`${owner}: image ${p} not in the bucket`); return null; }
-    const m = catalog.medien.get(md5);
-    if (!m) { problems.push(`${owner}: web versions of ${p} not made yet`); return null; }
-    if (m.art === "fehler") console.warn(`  ${owner}: ${p} unreadable: ${m.fehler}`);
-    return fromMedium(md5, m);
+  function webBild(pfad: string, besitzer: string): Bild | null {
+    const md5 = md5s.get(pfad);
+    if (md5 === undefined) { probleme.push(`${besitzer}: image ${pfad} not in the bucket`); return null; }
+    const m = katalog.medien.get(md5);
+    if (!m) { probleme.push(`${besitzer}: web versions of ${pfad} not made yet`); return null; }
+    if (m.art === "fehler") console.warn(`  ${besitzer}: ${pfad} unreadable: ${m.fehler}`);
+    return ausMedium(md5, m);
   }
 
-  // Ties broken by slug, so the order never depends on read order.
-  const bySlug = (a: { slug: string }, b: { slug: string }) => a.slug.localeCompare(b.slug);
-  const groups = [...catalog.werkgruppen].sort((a, b) => a.reihenfolge - b.reihenfolge || bySlug(a, b));
-  const thumbnail = (b: Bild) => b.video ? "/placeholder.png" : b.klein ?? b.src;
+  // Gleichstand nach Slug entschieden, damit die Reihenfolge nie von der Lesereihenfolge abhängt.
+  const nachSlug = (a: { slug: string }, b: { slug: string }) => a.slug.localeCompare(b.slug);
+  const gruppen = [...katalog.werkgruppen].sort((a, b) => a.reihenfolge - b.reihenfolge || nachSlug(a, b));
+  const vorschaubild = (b: Bild) => b.video ? "/placeholder.png" : b.klein ?? b.src;
 
   const werkgruppen = [];
-  const searchMetadata = {
+  const suchMetadaten = {
     MinYear: Number.MAX_VALUE, MaxYear: Number.MIN_VALUE,
     Werkgruppen: [] as any[], InvNrs: [] as string[],
   };
 
-  for (const group of groups) {
-    const works = catalog.works.filter(w => w.werkgruppe === group.slug);
-    const records = [];
+  for (const gruppe of gruppen) {
+    const werke = katalog.werke.filter(w => w.werkgruppe === gruppe.slug);
+    const eintraege = [];
 
-    for (const work of works) {
-      // The work's own image paths, in order; the first is the thumbnail.
-      const bilder = (work.images ?? []).map(p => webBild(p, work.slug)).filter((b): b is Bild => b !== null);
-      if (!bilder.length) bilder.push(PLACEHOLDER);
+    for (const werk of werke) {
+      // Die eigenen Bildpfade des Werks, in Reihenfolge; das erste ist das Vorschaubild.
+      const bilder = (werk.images ?? []).map(p => webBild(p, werk.slug)).filter((b): b is Bild => b !== null);
+      if (!bilder.length) bilder.push(PLATZHALTER);
 
-      const year = Number(work.Jahr);
-      if (year) {
-        searchMetadata.MinYear = Math.min(searchMetadata.MinYear, year);
-        searchMetadata.MaxYear = Math.max(searchMetadata.MaxYear, year);
+      const jahr = Number(werk.Jahr);
+      if (jahr) {
+        suchMetadaten.MinYear = Math.min(suchMetadaten.MinYear, jahr);
+        suchMetadaten.MaxYear = Math.max(suchMetadaten.MaxYear, jahr);
       }
 
-      records.push({
-        InvNr: work.InvNr,
-        InventoryNumber: work.InvNr.replaceAll(/[^0-9]/g, ""),
-        Slug: work.slug,
-        WerkgruppeSlug: group.slug,
-        ...Object.fromEntries(WORK_FIELDS.filter(f => f !== "InvNr").map(f => [f, work[f]])),
+      eintraege.push({
+        InvNr: werk.InvNr,
+        InventoryNumber: werk.InvNr.replaceAll(/[^0-9]/g, ""),
+        Slug: werk.slug,
+        WerkgruppeSlug: gruppe.slug,
+        ...Object.fromEntries(WERK_FELDER.filter(f => f !== "InvNr").map(f => [f, werk[f]])),
         Bilder: bilder,
-        Thumbnail: thumbnail(bilder[0]),
+        Thumbnail: vorschaubild(bilder[0]),
       });
     }
 
-    records.sort((a, b) =>
+    eintraege.sort((a, b) =>
       Number(a.InventoryNumber) - Number(b.InventoryNumber) || a.Slug.localeCompare(b.Slug));
-    searchMetadata.InvNrs.push(...records.map(r => r.InvNr));
+    suchMetadaten.InvNrs.push(...eintraege.map(e => e.InvNr));
 
-    if (!group.cover) problems.push(`no cover image for Werkgruppe ${group.slug}`);
-    const titelbild = group.cover ? webBild(group.cover, group.slug) ?? PLACEHOLDER : PLACEHOLDER;
+    if (!gruppe.cover) probleme.push(`no cover image for Werkgruppe ${gruppe.slug}`);
+    const titelbild = gruppe.cover ? webBild(gruppe.cover, gruppe.slug) ?? PLATZHALTER : PLATZHALTER;
 
     werkgruppen.push({
-      Titel: group.titel,
-      Slug: group.slug,
-      Thumbnail: thumbnail(titelbild),
+      Titel: gruppe.titel,
+      Slug: gruppe.slug,
+      Thumbnail: vorschaubild(titelbild),
       Titelbild: titelbild,
-      Count: records.length,
-      Records: records,
-      Reihenfolge: group.reihenfolge,
-      Kurztitel: group.kurztitel,
+      Count: eintraege.length,
+      Records: eintraege,
+      Reihenfolge: gruppe.reihenfolge,
+      Kurztitel: gruppe.kurztitel,
     });
-    searchMetadata.Werkgruppen.push({
-      WerkgruppenSlug: group.slug, WerkgruppenTitel: group.titel,
+    suchMetadaten.Werkgruppen.push({
+      WerkgruppenSlug: gruppe.slug, WerkgruppenTitel: gruppe.titel,
     });
-    console.log(`  ${group.slug.padEnd(22)} ${records.length} works`);
+    console.log(`  ${gruppe.slug.padEnd(22)} ${eintraege.length} works`);
   }
 
-  const orphanWorks = catalog.works.filter(w => !groups.some(g => g.slug === w.werkgruppe));
-  if (orphanWorks.length) problems.push(`${orphanWorks.length} work(s) in no Werkgruppe`);
+  const verwaist = katalog.werke.filter(w => !gruppen.some(g => g.slug === w.werkgruppe));
+  if (verwaist.length) probleme.push(`${verwaist.length} work(s) in no Werkgruppe`);
 
-  const pages = [...catalog.seiten]
-    .sort((a, b) => a.reihenfolge - b.reihenfolge || bySlug(a, b))
-    .map(p => ({
-      Name: p.titel, Slug: p.slug, Html: marked.parse(p.text),
-      Reihenfolge: p.reihenfolge, Kategorie: p.kategorie,
+  const seiten = [...katalog.seiten]
+    .sort((a, b) => a.reihenfolge - b.reihenfolge || nachSlug(a, b))
+    .map(s => ({
+      Name: s.titel, Slug: s.slug, Html: marked.parse(s.text),
+      Reihenfolge: s.reihenfolge, Kategorie: s.kategorie,
     }));
 
-  const works = werkgruppen.reduce((n, w) => n + w.Records.length, 0);
-  console.log(`\n${werkgruppen.length} Werkgruppen, ${works} works, ${pages.length} pages`);
+  const anzahlWerke = werkgruppen.reduce((n, w) => n + w.Records.length, 0);
+  console.log(`\n${werkgruppen.length} Werkgruppen, ${anzahlWerke} works, ${seiten.length} pages`);
 
-  if (problems.length) {
-    console.error(`\n${problems.length} problem(s) in the data:`);
-    for (const p of problems.slice(0, 40)) console.error(`  ! ${p}`);
+  if (probleme.length) {
+    console.error(`\n${probleme.length} problem(s) in the data:`);
+    for (const p of probleme.slice(0, 40)) console.error(`  ! ${p}`);
     if (env.STRICT === "1") process.exit(1);
   }
 
-  const searchData = werkgruppen.flatMap(w => w.Records.map((r: any) => ({
-    InvNr: r.InvNr, Beschreibung: r.Beschreibung, Jahr: r.Jahr,
-    Jahre: expandYears(r.Jahr), Slug: r.Slug, Titel: r.Titel,
-    Werkgruppe: r.Werkgruppe, WerkgruppeSlug: r.WerkgruppeSlug, Thumbnail: r.Thumbnail,
+  const suchDaten = werkgruppen.flatMap(w => w.Records.map((e: any) => ({
+    InvNr: e.InvNr, Beschreibung: e.Beschreibung, Jahr: e.Jahr,
+    Jahre: jahreAusloesen(e.Jahr), Slug: e.Slug, Titel: e.Titel,
+    Werkgruppe: e.Werkgruppe, WerkgruppeSlug: e.WerkgruppeSlug, Thumbnail: e.Thumbnail,
   })));
 
-  fs.writeFileSync(`${PUBLIC}/site.json`, JSON.stringify(catalog.artist));
+  fs.writeFileSync(`${PUBLIC}/site.json`, JSON.stringify(katalog.kuenstler));
   fs.writeFileSync(`${PUBLIC}/werkgruppen.json`, JSON.stringify(werkgruppen));
-  fs.writeFileSync(`${PUBLIC}/searchData.json`, JSON.stringify(searchData));
-  fs.writeFileSync(`${PUBLIC}/searchMetadata.json`, JSON.stringify(searchMetadata));
-  fs.writeFileSync(`${PUBLIC}/pages.json`, JSON.stringify(pages));
+  fs.writeFileSync(`${PUBLIC}/searchData.json`, JSON.stringify(suchDaten));
+  fs.writeFileSync(`${PUBLIC}/searchMetadata.json`, JSON.stringify(suchMetadaten));
+  fs.writeFileSync(`${PUBLIC}/pages.json`, JSON.stringify(seiten));
   fs.writeFileSync(`${PUBLIC}/robots.txt`,
     `User-agent: *\nAllow: /\n\nSitemap: ${env.SITE}/sitemap-index.xml\n`);
 }
 
-await build();
+await bauen();

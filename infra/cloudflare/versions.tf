@@ -7,11 +7,11 @@ terraform {
 }
 
 provider "google" {
-  project = var.infra_project
+  project = var.infra_projekt
 }
 
-# Infrastructure Manager can't be handed a secret, so the token is read from the
-# infra project's Secret Manager while Terraform runs (bootstrap.sh stores it).
+# Infrastructure Manager kann man kein Secret übergeben, deshalb liest Terraform
+# das Token beim Lauf aus dem Secret Manager des Infra-Projekts (bootstrap.sh legt es ab).
 data "google_secret_manager_secret_version" "cloudflare" {
   secret = "cloudflare-terraform-token"
 }

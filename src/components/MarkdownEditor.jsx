@@ -7,14 +7,16 @@ import {
 } from "@mdxeditor/editor";
 
 /**
- * Formatting editor that reads and writes plain Markdown, for the content pages.
- * Only what the site renders: headings 2–3 (the page title is the h1), bold,
- * italic, links, lists, quotes, tables. No underline — Markdown has none, it
- * would be stored as HTML. "Quelltext" shows the raw Markdown.
+ * Formatierender Editor, der reines Markdown liest und schreibt, für die
+ * Inhaltsseiten. Nur, was die Seite darstellt: Überschriften 2–3 (der Seitentitel
+ * ist die h1), fett, kursiv, Links, Listen, Zitate, Tabellen. Kein Unterstreichen —
+ * Markdown kennt das nicht, es würde als HTML gespeichert. „Quelltext“ zeigt das
+ * rohe Markdown.
  *
- * `markdown` is read once; give the component a `key` per page to load another.
+ * `markdown` wird einmal gelesen; für eine andere Seite der Komponente je Seite
+ * einen eigenen `key` geben.
  */
-export default function MarkdownEditor({ markdown, onChange, readOnly }) {
+export default function MarkdownEditor({ markdown, onAenderung, nurLesen }) {
   return (
     <div className="border rounded markdown-editor">
       <style>{`
@@ -29,8 +31,8 @@ export default function MarkdownEditor({ markdown, onChange, readOnly }) {
       `}</style>
       <MDXEditor
         markdown={markdown}
-        onChange={onChange}
-        readOnly={readOnly}
+        onChange={onAenderung}
+        readOnly={nurLesen}
         contentEditableClassName="md-content"
         plugins={[
           headingsPlugin({ allowedHeadingLevels: [2, 3] }),

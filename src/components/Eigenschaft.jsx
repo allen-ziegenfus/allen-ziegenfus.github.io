@@ -1,27 +1,25 @@
-import { React, useEffect, useState } from "react";
-
-export function Eigenschaft({ title, value }) {
+export function Eigenschaft({ titel, wert }) {
   return (
-    value &&
-    value !== "-" && (
+    wert &&
+    wert !== "-" && (
       <p className="py-1">
-        <span className="font-semibold text-gray-500">{title}: </span>
-        {value}
+        <span className="font-semibold text-gray-500">{titel}: </span>
+        {wert}
       </p>
     )
   );
 }
 
-export function EigenschaftWithLink({ title, value, href }) {
+export function EigenschaftMitLink({ titel, wert, href }) {
   return (
-    value &&
-    value !== "-" && (
+    wert &&
+    wert !== "-" && (
       <p className="py-1">
-        <span className="font-semibold text-gray-500">{title}: </span>
+        <span className="font-semibold text-gray-500">{titel}: </span>
 
         <a className="text-blue-800" href={href}>
           {" "}
-          {value}
+          {wert}
         </a>
       </p>
     )

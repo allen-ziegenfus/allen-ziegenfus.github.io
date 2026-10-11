@@ -1,5 +1,5 @@
-variable "project_id" {
-  description = "The site's GCP project."
+variable "projekt_id" {
+  description = "Das GCP-Projekt der Seite."
   type        = string
 }
 
@@ -8,46 +8,46 @@ variable "region" {
   default = "europe-west3"
 }
 
-variable "artist" {
-  description = "Firestore artist id (artists/{artist}); the build's ARTIST_ID."
+variable "kuenstler" {
+  description = "Kennung der Künstler:in in Firestore (artists/{kuenstler}); die ARTIST_ID des Builds."
   type        = string
 }
 
-variable "firestore_database" {
+variable "firestore_datenbank" {
   type    = string
   default = "werkverzeichnis"
 }
 
 variable "bucket" {
-  description = "Originals bucket. Null: <project>.firebasestorage.app, the one Firebase creates."
+  description = "Bucket der Originale. Null: <projekt>.firebasestorage.app, den Firebase anlegt."
   type        = string
   default     = null
 }
 
-variable "github_connection" {
-  description = "Cloud Build GitHub connection, created in the console (it needs a browser sign-in)."
+variable "github_verbindung" {
+  description = "GitHub-Verbindung von Cloud Build, angelegt in der Konsole (braucht eine Anmeldung im Browser)."
   type        = string
 }
 
 variable "github_repo" {
-  description = "owner/name on GitHub."
+  description = "besitzer/name auf GitHub."
   type        = string
 }
 
 variable "branch" {
-  description = "Branch the trigger builds, and the Pages branch it deploys to."
+  description = "Branch, den der Trigger baut, und Pages-Branch, auf den er deployt."
   type        = string
 }
 
-variable "site_url" {
+variable "seiten_url" {
   type = string
 }
 
-variable "pages_project" {
-  description = "Cloudflare Pages project the build deploys to."
+variable "pages_projekt" {
+  description = "Cloudflare-Pages-Projekt, auf das der Build deployt."
   type        = string
 }
 
-variable "cloudflare_account_id" {
+variable "cloudflare_konto_id" {
   type = string
 }

@@ -1,19 +1,17 @@
-import { React, useEffect, useState } from "react";
-
-export function setSearchState() {
-  const event = new CustomEvent("openSearch");
-  window.dispatchEvent(event);
+export function sucheOeffnen() {
+  window.dispatchEvent(new CustomEvent("openSearch"));
 }
 
-export default function SearchNavigation({}) {
-  const urlParams = new URLSearchParams(window.location.search);
+/** „Zurück zu Suchergebnissen“, wenn das Werk aus der Suche geöffnet wurde (?search=…). */
+export default function SuchNavigation() {
+  const parameter = new URLSearchParams(window.location.search);
 
-  const search = urlParams.get("search");
+  const suche = parameter.get("search");
   return (
-    search !== null && (
+    suche !== null && (
       <div class="my-3">
-        <a class="cursor-pointer" onClick={setSearchState}>
-          ← Zurück zu Suchergebnissen {search && <>für {search}</>}
+        <a class="cursor-pointer" onClick={sucheOeffnen}>
+          ← Zurück zu Suchergebnissen {suche && <>für {suche}</>}
         </a>
       </div>
     )
