@@ -28,6 +28,9 @@ cp "$hier/$schicht"/*.tf "$arbeit/src/"
 cp "$hier/sites/$seite/$schicht.tfvars" "$arbeit/eingaben.tfvars"
 [ "$schicht" = cloudflare ] && echo "infra_projekt = \"$INFRA_PROJECT\"" >> "$arbeit/eingaben.tfvars"
 
+# gcloud braucht ein Projekt für die API-Aufrufe, auch bei vollen Ressourcennamen.
+export CLOUDSDK_CORE_PROJECT=$INFRA_PROJECT
+
 argumente=(
   --service-account="projects/$INFRA_PROJECT/serviceAccounts/infra-manager@$INFRA_PROJECT.iam.gserviceaccount.com"
   --local-source="$arbeit/src"
