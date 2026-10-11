@@ -39,14 +39,29 @@ const lockOf = artistRef => artistRef.collection("intern").doc("veroeffentlichen
 // A lock older than the build timeout lost its status message; don't wait on it.
 const STALE = 30 * 60 * 1000;
 
+/**
+ * Releases the lock after a failed start. Requests that queued up meanwhile
+ * fail too: no build will end to pick them up.
+ */
+async function release(artistRef, meldung) {
+  const lock = lockOf(artistRef);
+  await db().runTransaction(async tx => {
+    await tx.get(lock);
+    const waiting = await tx.get(artistRef.collection("veroeffentlichungen").where("status", "==", "wartet"));
+    for (const d of waiting.docs) tx.update(d.ref, { status: "fehler", meldung });
+    tx.delete(lock);
+  });
+}
+
 /** Starts one build for `refs` (requests of one artist, who holds the lock). */
 async function start(artistRef, refs) {
   const artist = artistRef.id;
   const lock = lockOf(artistRef);
   const site = SITES[artist];
   if (!site) {
-    await Promise.all(refs.map(r => r.update({ status: "fehler", meldung: `Kein Build für „${artist}“ eingerichtet.` })));
-    await lock.delete();
+    const meldung = `Kein Build für „${artist}“ eingerichtet.`;
+    await Promise.all(refs.map(r => r.update({ status: "fehler", meldung })));
+    await release(artistRef, meldung);
     return;
   }
   cloudBuild ??= new CloudBuildClient();
@@ -66,8 +81,9 @@ async function start(artistRef, refs) {
     logger.info(`${artist}: build ${build.id} for ${refs.length} request(s)`);
   } catch (e) {
     logger.error(e);
-    await Promise.all(refs.map(r => r.update({ status: "fehler", meldung: String(e.message ?? e) })));
-    await lock.delete();
+    const meldung = String(e.message ?? e);
+    await Promise.all(refs.map(r => r.update({ status: "fehler", meldung })));
+    await release(artistRef, meldung);
   }
 }
 

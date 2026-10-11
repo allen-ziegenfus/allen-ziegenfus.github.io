@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  addDoc, collection, getCountFromServer, limit, onSnapshot, orderBy, query, serverTimestamp, where,
+  addDoc, collection, limit, onSnapshot, orderBy, query, serverTimestamp, where,
 } from "firebase/firestore";
 import { db } from "./firebaseClient.js";
 
@@ -16,6 +16,8 @@ const STATUS = {
 };
 const COLOR = { fertig: "text-green-700", fehler: "text-red-700" };
 const button = "px-3 py-1 border rounded disabled:opacity-40";
+const MAX = 100;
+const count = n => n > MAX ? `über ${MAX}` : n;
 const when = t => t?.toDate().toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) ?? "…";
 
 export default function Veroeffentlichen({ artistId, me, allowed }) {
@@ -35,17 +37,18 @@ export default function Veroeffentlichen({ artistId, me, allowed }) {
     snap => setLast(snap.docs[0]?.get("gestartet") ?? null),
     e => setError(e.message)), [artistId]);
 
-  // Edits since then. Werkgruppen carry no timestamp, so their changes are not counted.
+  // Edits since then, live, so saving a page updates them; at most MAX + 1 are
+  // read. Werkgruppen carry no timestamp, so their changes are not counted.
   useEffect(() => {
-    if (!list || last === undefined) return;
-    const artist = ["artists", artistId];
-    const since = (c, field) => getCountFromServer(last
-      ? query(collection(db, ...artist, c), where(field, ">", last))
-      : collection(db, ...artist, c)).then(s => s.data().count);
-    Promise.all([since("history", "at"), since("seiten", "updatedAt")])
-      .then(([werke, seiten]) => setChanges({ werke, seiten }))
-      .catch(e => setError(e.message));
-  }, [artistId, last?.toMillis(), list?.length]);
+    if (last === undefined) return;
+    setChanges({});
+    const since = (c, field) => onSnapshot(
+      query(collection(db, "artists", artistId, c), ...(last ? [where(field, ">", last)] : []), limit(MAX + 1)),
+      snap => setChanges(ch => ({ ...ch, [c]: snap.size })),
+      e => setError(e.message));
+    const stop = [since("history", "at"), since("seiten", "updatedAt")];
+    return () => stop.forEach(f => f());
+  }, [artistId, last]);
 
   const busy = list?.some(v => ["angefordert", "läuft"].includes(v.status));
 
@@ -61,11 +64,11 @@ export default function Veroeffentlichen({ artistId, me, allowed }) {
   return (
     <div className="pt-4 space-y-2">
       <h3 className="text-lg">Veröffentlichen</h3>
-      {changes && (
+      {changes?.history !== undefined && changes?.seiten !== undefined && (
         <p className="text-sm">
           {last ? `Seit der letzten Veröffentlichung (${when(last)}): ` : "Noch nie veröffentlicht. "}
-          {changes.werke} Änderung{changes.werke === 1 ? "" : "en"} an Werken,{" "}
-          {changes.seiten} geänderte Seite{changes.seiten === 1 ? "" : "n"}.
+          {count(changes.history)} Änderung{changes.history === 1 ? "" : "en"} an Werken,{" "}
+          {count(changes.seiten)} geänderte Seite{changes.seiten === 1 ? "" : "n"}.
         </p>
       )}
       {allowed && (
