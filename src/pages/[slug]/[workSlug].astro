@@ -1,10 +1,10 @@
 ---
+import site from "../../../public/site.json";
 import Layout from "../../layouts/Layout.astro";
 import ImageViewer from "../../components/ImageViewer.jsx";
 import { Eigenschaft, EigenschaftWithLink } from "../../components/Eigenschaft";
 import werkgruppen from "../../../public/werkgruppen.json";
 import SearchNavigation from "../../components/SearchNavigation";
-import EditLink from "../../components/EditLink.jsx";
 
 export async function getStaticPaths() {
   const works = [];
@@ -50,7 +50,7 @@ const imgs = work.Bilder;
 ---
 
 <Layout
-  title={work.Titel + " - " + import.meta.env.WEBSITE_TITLE}
+  title={work.Titel + " - " + site.websiteTitel}
   description={work.Beschreibung}
   image={work.Bilder[0].video ? work.Thumbnail : work.Bilder[0].src}
 >
@@ -72,7 +72,6 @@ const imgs = work.Bilder;
     <div class="eigenschaften w-full lg:w-1/2">
       <h2 class="hidden md:block text-lg md:text-2xl py-3">{work.Titel}</h2>
       <h2 class="py-3 text-xl">Inv. Nr.: {work.InvNr}</h2>
-      <EditLink client:only="react" gruppe={slug} invNr={work.InvNr} />
       <h3 class="py-3 text-xl">Eigenschaften</h3>
       <EigenschaftWithLink
         title="Werkgruppe"

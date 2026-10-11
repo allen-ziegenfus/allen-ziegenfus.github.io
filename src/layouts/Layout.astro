@@ -1,4 +1,5 @@
 ---
+import site from "../../public/site.json";
 import SearchBar from "../components/SearchBar.jsx";
 import SearchIcon from "../components/SearchIcon.jsx";
 import werkgruppen from "../../public/werkgruppen.json";
@@ -74,10 +75,10 @@ const socialImageURL = new URL(image, canonicalURL);
       >
         <a class="flex-grow" href="/"
           ><h1 class="text-lg md:text-2xl lg:hidden print:hidden">
-            {import.meta.env.WEBSITE_TITLE_MOBILE_LINE_1} <br/> {import.meta.env.WEBSITE_TITLE_MOBILE_LINE_2}
+            {site.titelZeile1} <br/> {site.titelZeile2}
           </h1>
           <h1 class="text-lg md:text-2xl hidden lg:block print:block">
-            {import.meta.env.WEBSITE_TITLE}
+            {site.websiteTitel}
           </h1></a
         >
         <div class="lg:hidden ml-2 print:hidden">
@@ -338,34 +339,10 @@ const socialImageURL = new URL(image, canonicalURL);
           }
         </ul>
         <p>
-          Copyright © {year} {import.meta.env.COPYRIGHT_AUTHOR}
-          <a id="editor-login"
-             class="ml-3 text-sm text-gray-400 hover:text-gray-600 print:hidden inline-flex items-center gap-1 align-middle"
-             href="/bearbeiten/" rel="nofollow">Anmelden</a>
+          Copyright © {year} {site.copyright}
+          <a class="ml-3 text-sm text-gray-400 hover:text-gray-600 print:hidden"
+             href="/firestore-test/admin/" rel="nofollow">Anmelden</a>
         </p>
-        <script is:inline>
-          // Signed into the editor in this tab? Show who, instead of "Anmelden".
-          // Reads what src/components/editorAuth.js stores; nothing here is checked
-          // by Google, so it is display only.
-          (function () {
-            try {
-              var t = JSON.parse(sessionStorage.getItem("werkverzeichnis.token"));
-              if (!t || !t.profile || t.expires_at - Date.now() < 60000) return;
-              var a = document.getElementById("editor-login");
-              a.textContent = "";
-              a.title = "Angemeldet als " + t.profile.email;
-              if (t.profile.picture) {
-                var img = document.createElement("img");
-                img.src = t.profile.picture;
-                img.alt = "";
-                img.referrerPolicy = "no-referrer";
-                img.className = "w-5 h-5 rounded-full";
-                a.appendChild(img);
-              }
-              a.appendChild(document.createTextNode("Bearbeiten"));
-            } catch (e) {}
-          })();
-        </script>
       </nav>
     </footer>
   </body>
