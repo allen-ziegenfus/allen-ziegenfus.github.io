@@ -20,6 +20,7 @@ const when = t => t?.toDate().toLocaleString("de-DE", { dateStyle: "short", time
 
 export default function Veroeffentlichen({ artistId, me, allowed }) {
   const [list, setList] = useState();
+  const [last, setLast] = useState();  // null: never published
   const [changes, setChanges] = useState();
   const [error, setError] = useState();
   const col = collection(db, "artists", artistId, "veroeffentlichungen");
@@ -28,11 +29,15 @@ export default function Veroeffentlichen({ artistId, me, allowed }) {
     snap => setList(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
     e => setError(e.message)), [artistId]);
 
-  // Edits since the last successful build started. Werkgruppen carry no
-  // timestamp, so their changes are not counted.
-  const last = list?.find(v => v.status === "fertig")?.gestartet;
+  // When the last successful build started; on its own, since it can be older
+  // than the five requests listed.
+  useEffect(() => onSnapshot(query(col, where("status", "==", "fertig"), orderBy("gestartet", "desc"), limit(1)),
+    snap => setLast(snap.docs[0]?.get("gestartet") ?? null),
+    e => setError(e.message)), [artistId]);
+
+  // Edits since then. Werkgruppen carry no timestamp, so their changes are not counted.
   useEffect(() => {
-    if (!list) return;
+    if (!list || last === undefined) return;
     const artist = ["artists", artistId];
     const since = (c, field) => getCountFromServer(last
       ? query(collection(db, ...artist, c), where(field, ">", last))
