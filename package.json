@@ -22,7 +22,7 @@
     "astro": "^2.2.0",
     "astro-imagetools": "^0.8.1",
     "astro-navbar": "^2.3.0",
-    "axios": "^1.4.0",
+    "axios": "^1.20.0",
     "dotenv": "^16.0.3",
     "flexsearch": "^0.7.31",
     "marked": "^9.1.3",
