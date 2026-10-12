@@ -17,21 +17,7 @@ erledigt die wenigen Schritte, die Terraform nicht kann. In der Cloud Shell öff
 https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/allen-ziegenfus/allen-ziegenfus.github.io&cloudshell_git_branch=firestore-build&cloudshell_tutorial=infra/BOOTSTRAP.md
 ```
 
-## 1. Das Infra-Projekt
-
-Eine Projekt-ID wählen (weltweit eindeutig), das Rechnungskonto heraussuchen und
-das Bootstrap starten. Es legt das Projekt an, falls nötig, schaltet
-Infrastructure Manager ein, legt das Servicekonto `infra-manager@` und das Secret
-`cloudflare-terraform-token` an und fragt nach dessen Wert (leer überspringt;
-siehe Schritt 2).
-
-```sh
-gcloud billing accounts list
-export INFRA_PROJECT=werkverzeichnis-infra
-infra/bootstrap.sh infra $INFRA_PROJECT <rechnungskonto-id>
-```
-
-## 2. Das Cloudflare-Token für Terraform
+## 1. Das Cloudflare-Token für Terraform
 
 Cloudflare-Dashboard → My Profile → API Tokens → Create Token → Custom token:
 
@@ -39,7 +25,8 @@ Cloudflare-Dashboard → My Profile → API Tokens → Create Token → Custom t
 - Account · Workers R2 Storage · Edit
 - Account resources: das Konto, in dem die Seiten liegen
 
-Speichern (oder Schritt 1 wiederholen, der fragt, solange es keine Version gibt):
+Den Wert bereithalten; Schritt 2 fragt danach. Ohne Token dort einfach Enter
+drücken; nötig ist es erst für `apply.sh … cloudflare`. Nachträglich speichern:
 
 ```sh
 read -rs T && printf %s "$T" | gcloud secrets versions add cloudflare-terraform-token \
@@ -48,6 +35,20 @@ read -rs T && printf %s "$T" | gcloud secrets versions add cloudflare-terraform-
 
 Das ist ein anderes Token als `cloudflare-pages-token` des Builds (nur Pages
 deployen), das im Projekt der Seite liegt.
+
+## 2. Das Infra-Projekt
+
+Eine Projekt-ID wählen (weltweit eindeutig), das Rechnungskonto heraussuchen und
+das Bootstrap starten. Es legt das Projekt an, falls nötig, schaltet
+Infrastructure Manager ein, legt das Servicekonto `infra-manager@` und das Secret
+`cloudflare-terraform-token` an und fragt nach dessen Wert (Schritt 1;
+leer überspringt).
+
+```sh
+gcloud billing accounts list
+export INFRA_PROJECT=werkverzeichnis-infra
+infra/bootstrap.sh infra $INFRA_PROJECT <rechnungskonto-id>
+```
 
 ## 3. Ein Seiten-Projekt
 

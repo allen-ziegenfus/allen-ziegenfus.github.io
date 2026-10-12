@@ -13,6 +13,16 @@ befehl=${1:?infra or add-site}
 INFRA=${2:?infra project id}
 KONTO=infra-manager@$INFRA.iam.gserviceaccount.com
 
+# Ein neues Servicekonto ist in IAM erst nach einigen Sekunden überall bekannt;
+# Bindungen an es bis dahin wiederholen.
+wiederholen() {
+  for i in 1 2 3 4 5 6; do
+    "$@" && return
+    echo "Noch einmal in 10 s ($i/6) …" >&2; sleep 10
+  done
+  "$@"
+}
+
 case $befehl in
 infra)
   if ! gcloud projects describe "$INFRA" >/dev/null 2>&1; then
@@ -28,13 +38,13 @@ infra)
   gcloud iam service-accounts describe "$KONTO" --project="$INFRA" >/dev/null 2>&1 \
     || gcloud iam service-accounts create infra-manager --project="$INFRA" \
          --display-name="Infrastructure Manager (Terraform)"
-  gcloud projects add-iam-policy-binding "$INFRA" --member="serviceAccount:$KONTO" \
+  wiederholen gcloud projects add-iam-policy-binding "$INFRA" --member="serviceAccount:$KONTO" \
     --role=roles/config.agent --condition=None >/dev/null
 
   # Pages und R2 bearbeiten (später DNS); nur Terraform liest es, nie ein Build.
   gcloud secrets describe cloudflare-terraform-token --project="$INFRA" >/dev/null 2>&1 \
     || gcloud secrets create cloudflare-terraform-token --project="$INFRA" --replication-policy=automatic
-  gcloud secrets add-iam-policy-binding cloudflare-terraform-token --project="$INFRA" \
+  wiederholen gcloud secrets add-iam-policy-binding cloudflare-terraform-token --project="$INFRA" \
     --member="serviceAccount:$KONTO" --role=roles/secretmanager.secretAccessor --condition=None >/dev/null
   if [ -z "$(gcloud secrets versions list cloudflare-terraform-token --project="$INFRA" --filter=state=enabled --format='value(name)')" ]; then
     read -rsp "Cloudflare-Token für Terraform (leer = überspringen): " token; echo
