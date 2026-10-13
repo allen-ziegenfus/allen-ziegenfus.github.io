@@ -44,8 +44,9 @@ export default function Veroeffentlichen({ kuenstlerId, ich, erlaubt }) {
     if (zuletzt === undefined) return;
     setAenderungen({});
     const seit = (c, feld) => onSnapshot(
-      query(collection(db, "artists", kuenstlerId, c), ...(zuletzt ? [where(feld, ">", zuletzt)] : []), limit(HOECHSTENS + 1)),
-      snap => setAenderungen(a => ({ ...a, [c]: snap.size })),
+      query(collection(db, "artists", kuenstlerId, c), ...(zuletzt ? [where(feld, ">", zuletzt)] : []),
+        orderBy(feld, "desc"), limit(HOECHSTENS + 1)),
+      snap => setAenderungen(a => ({ ...a, [c]: snap.docs.map(d => ({ id: d.id, ...d.data() })) })),
       e => setFehler(e.message));
     const beenden = [seit("history", "at"), seit("seiten", "updatedAt")];
     return () => beenden.forEach(f => f());
@@ -66,11 +67,23 @@ export default function Veroeffentlichen({ kuenstlerId, ich, erlaubt }) {
     <div className="pt-4 space-y-2">
       <h3 className="text-lg">Veröffentlichen</h3>
       {aenderungen?.history !== undefined && aenderungen?.seiten !== undefined && (
-        <p className="text-sm">
-          {zuletzt ? `Seit der letzten Veröffentlichung (${wann(zuletzt)}): ` : "Noch nie veröffentlicht. "}
-          {anzahl(aenderungen.history)} Änderung{aenderungen.history === 1 ? "" : "en"} an Werken,{" "}
-          {anzahl(aenderungen.seiten)} geänderte Seite{aenderungen.seiten === 1 ? "" : "n"}.
-        </p>
+        <details className="text-sm">
+          <summary className="cursor-pointer">
+            {zuletzt ? `Seit der letzten Veröffentlichung (${wann(zuletzt)}): ` : "Noch nie veröffentlicht. "}
+            {anzahl(aenderungen.history.length)} Änderung{aenderungen.history.length === 1 ? "" : "en"} an Werken,{" "}
+            {anzahl(aenderungen.seiten.length)} geänderte Seite{aenderungen.seiten.length === 1 ? "" : "n"}.
+          </summary>
+          <ul className="pl-4 pt-1">
+            {aenderungen.history.slice(0, HOECHSTENS).map(h => (
+              <li key={h.id}>
+                {wann(h.at)} · Werk {h.work}: {Object.keys(h.changes ?? {}).join(", ") || "—"} · {h.by}
+              </li>
+            ))}
+            {aenderungen.seiten.slice(0, HOECHSTENS).map(s => (
+              <li key={s.id}>{wann(s.updatedAt)} · Seite „{s.titel || s.id}“</li>
+            ))}
+          </ul>
+        </details>
       )}
       {erlaubt && (
         <button className={knopf} onClick={veroeffentlichen} disabled={!liste}>
